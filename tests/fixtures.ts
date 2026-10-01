@@ -1,0 +1,24 @@
+import { parseHomeBankXml } from "../src/lib/homebank";
+
+export const sampleXml = `<?xml version="1.0"?>
+<homebank v="1.6" d="51003">
+  <properties title="Test" curr="1"/>
+  <cur key="1" iso="EUR" frac="2" rate="1"/>
+  <account key="1" name="Banque" type="1" curr="1" initial="100" minimum="-50"/>
+  <account key="2" name="Epargne" type="7" curr="1" initial="200"/>
+  <account key="3" name="Ferme" flags="2" type="1" curr="1" initial="999"/>
+  <pay key="1" name="Tiers existant"/>
+  <cat key="1" name="Maison"/>
+  <cat key="2" parent="1" name="Courses"/>
+  <tag key="1" name="test"/>
+  <fav key="1" date="739890" wording="Modele" custom="preserve"/>
+  <asg key="1" name="Regle"/>
+  <flt key="1" name="Filtre"/>
+  <ope date="739890" account="1" amount="-20" st="2" payee="1" category="2" wording="Courses" info="123" tags="test"/>
+  <ope date="739891" account="1" amount="-10" st="1"/>
+  <ope date="739920" account="1" amount="-5" st="0"/>
+  <ope date="739891" account="1" amount="1000" st="3"/>
+  <ope date="739891" account="2" amount="40" st="2"/>
+</homebank>`;
+
+export const sampleWallet = () => parseHomeBankXml(sampleXml, "test.xhb");
