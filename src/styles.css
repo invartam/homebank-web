@@ -269,6 +269,66 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
 .navigation-file > span { display: grid; gap: 5px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
 .navigation-file small { font-size: 11px; color: var(--muted); }
 
+.scheduled-view { min-width: 0; }
+.schedule-filters { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 16px; margin: 24px 0 16px; }
+.schedule-filters > * { min-width: 0; }
+.schedule-period { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.schedule-period > span:last-child { margin-left: auto; }
+.schedule-issues { margin-bottom: 20px; overflow-wrap: anywhere; }
+.schedule-issues ul { margin: 8px 0 0; padding-left: 18px; }
+.schedule-currency-summary { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--outline); }
+.schedule-currency-summary > h3 { margin: 0 0 16px; font-size: 14px; }
+.schedule-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.schedule-summary > div { min-width: 0; }
+.schedule-summary dt { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.schedule-summary dt svg { flex-shrink: 0; }
+.schedule-summary dd { margin: 10px 0 16px; font-size: 26px; line-height: 1.3; font-weight: 500; overflow-wrap: anywhere; }
+.forecast-track { height: 5px; background: var(--outline); overflow: hidden; border-radius: 2px; }
+.forecast-track > span { display: block; height: 100%; }
+.income-bar { background: var(--success); }
+.expense-bar { background: var(--danger); }
+.schedule-transfers { display: flex; align-items: flex-start; gap: 8px; margin: 20px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.schedule-transfers svg { flex-shrink: 0; margin-top: 2px; }
+.schedule-account-overview { margin-bottom: 28px; }
+.schedule-account-overview h3, .schedule-group h3 { margin: 0 0 12px; font-size: 15px; font-weight: 500; }
+.schedule-account-row.MuiButtonBase-root { display: grid; grid-template-columns: minmax(0, 1.2fr) repeat(3, minmax(0, 1fr)) 18px; gap: 12px; width: 100%; padding: 16px 12px; text-align: left; border-bottom: 1px solid var(--outline); }
+.schedule-account-row:hover, .schedule-row:hover { background: var(--hover); }
+.schedule-account-row > span { display: grid; gap: 5px; min-width: 0; }
+.schedule-account-row small { font-size: 11px; color: var(--muted); }
+.schedule-account-row strong { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.schedule-account-name svg { display: none; }
+.schedule-account-row > svg { color: var(--subtle-icon); }
+.schedule-tabs { margin-bottom: 24px; border-bottom: 1px solid var(--outline); }
+.schedule-tabs .MuiTab-root { min-width: 0; }
+.schedule-groups { display: grid; gap: 28px; }
+.schedule-group { min-width: 0; }
+.schedule-group h3 { display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; }
+.schedule-group h3 svg { flex-shrink: 0; color: var(--secondary); }
+.schedule-group h3 small { margin-left: auto; color: var(--muted); font-weight: 400; }
+.schedule-list { list-style: none; margin: 0; padding: 0; }
+.schedule-row.MuiButtonBase-root { display: grid; grid-template-columns: 102px minmax(0, 1fr) minmax(90px, max-content) 16px; gap: 12px 20px; width: 100%; padding: 18px 12px; color: var(--text); text-align: left; border-bottom: 1px solid var(--outline); }
+.schedule-date { display: grid; gap: 4px; align-self: start; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.schedule-date small { color: var(--secondary); }
+.schedule-date.overdue small { color: var(--warning); }
+.schedule-identity { display: grid; gap: 5px; min-width: 0; overflow-wrap: anywhere; }
+.schedule-identity strong { font-size: 14px; font-weight: 500; }
+.schedule-identity > span, .schedule-identity small { font-size: 12px; color: var(--muted); }
+.schedule-row-value { display: grid; gap: 6px; text-align: right; min-width: 0; }
+.schedule-row-value strong { font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
+.schedule-row-value small { font-size: 11px; color: var(--muted); }
+.schedule-row-chevron { color: var(--subtle-icon); }
+.schedule-overdue.MuiAccordion-root { margin: 0 0 24px; border: 1px solid var(--outline); border-radius: 0; box-shadow: none; background: var(--subtle-surface); }
+.schedule-overdue.MuiAccordion-root::before { display: none; }
+.schedule-overdue .MuiAccordionSummary-content { font-size: 13px; color: var(--warning); }
+.schedule-detail-title.MuiDialogTitle-root { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; font-size: 20px; }
+.schedule-detail-title > span { min-width: 0; overflow-wrap: anywhere; }
+.schedule-detail-title button { flex-shrink: 0; }
+.schedule-detail-amount { margin: 0 0 14px; font-size: 28px; line-height: 1.3; font-weight: 500; overflow-wrap: anywhere; }
+.schedule-details { display: grid; gap: 14px; margin: 24px 0 0; }
+.schedule-details > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--outline); }
+.schedule-details dt { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.schedule-details dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+
 @media (max-width: 1100px) {
   :root { --navigation-width: 208px; }
   .topbar { padding-inline: 28px; }
@@ -290,7 +350,7 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
   main { padding: 24px 24px 0; }
   .desktop-owner { display: none; }
   .status-line { padding: 0 24px; }
-  .bottom-nav { top: auto; right: 0; bottom: 0; width: auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; gap: 4px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--outline); background: var(--surface); }
+  .bottom-nav { top: auto; right: 0; bottom: 0; width: auto; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center; gap: 4px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-right: 0; border-top: 1px solid var(--outline); background: var(--surface); }
   .navigation-brand, .navigation-caption, .navigation-file { display: none; }
   .nav-button.MuiButtonBase-root { order: 0; flex-direction: column; justify-content: center; gap: 4px; min-height: 64px; padding: 0; border-radius: 0; font-size: 11px; }
   .nav-icon { width: 56px; height: 32px; border-radius: 20px; }
@@ -299,6 +359,7 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
   .fab.MuiFab-root { order: 0; justify-self: center; width: 52px; height: 52px; min-height: 52px; padding: 0; border-radius: 16px; }
   .fab-slot { order: 0; width: 52px; height: 52px; justify-self: center; }
   .fab > span:not(.MuiTouchRipple-root) { display: none; }
+  .schedule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 600px) {
@@ -338,6 +399,26 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
   .form-grid { grid-template-columns: 1fr; gap: 22px; margin-top: 24px; }
   .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .status-line { margin-top: 24px; padding-inline: 20px; }
+  .schedule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .schedule-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }
+  .schedule-summary > div:last-child { grid-column: 1 / -1; }
+  .schedule-summary dd { font-size: 22px; margin-bottom: 12px; }
+  .schedule-summary dt { font-size: 12px; }
+  .schedule-summary > div:last-child dd { margin-bottom: 0; }
+  .schedule-period > span:last-child { margin-left: 0; flex-basis: 100%; padding-left: 24px; }
+  .schedule-account-row.MuiButtonBase-root { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 10px; padding: 16px 0; }
+  .schedule-account-row > .schedule-account-name { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+  .schedule-account-name svg { display: block; flex-shrink: 0; color: var(--secondary); }
+  .schedule-account-name small { margin-left: auto; }
+  .schedule-account-row > svg { display: none; }
+  .schedule-account-row strong { font-size: 12px; }
+  .schedule-account-name strong { font-size: 14px; }
+  .schedule-row.MuiButtonBase-root { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 10px; padding: 16px 0; }
+  .schedule-date { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+  .schedule-identity > span, .schedule-identity small { font-size: 11px; }
+  .schedule-row-value strong { font-size: 14px; }
+  .schedule-row-chevron { display: none; }
+  .schedule-detail-title.MuiDialogTitle-root { font-size: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

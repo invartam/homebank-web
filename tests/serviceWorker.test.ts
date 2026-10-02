@@ -8,7 +8,7 @@ function worker() {
   const listeners = new Map<string, (event: unknown) => void>();
   const cache = { match: vi.fn(async () => undefined as unknown), put: vi.fn(async () => undefined), addAll: vi.fn(async () => undefined) };
   const fetch = vi.fn(async () => ({ ok: true, type: "basic", clone: () => "fresh-copy" }));
-  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v15"]), delete: vi.fn(async () => true) };
+  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v16"]), delete: vi.fn(async () => true) };
   const self = { location: { origin: "https://local.test" }, addEventListener: (name: string, fn: (event: unknown) => void) => listeners.set(name, fn), clients: { claim: vi.fn(async () => undefined) } };
   runInNewContext(source, { URL, self, caches, fetch });
   return { cache, fetch, caches, self, listeners };

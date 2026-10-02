@@ -1,4 +1,4 @@
-import { ArrowDownToLine, ArrowRight, ChevronRight, CircleCheck, FolderOpen, Landmark, Plus, Vault, WalletCards } from "lucide-react";
+import { ArrowDownToLine, ArrowRight, CalendarClock, ChevronRight, CircleCheck, FolderOpen, Landmark, Plus, Vault, WalletCards } from "lucide-react";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import { type Account, type AccountBalances, type Transaction, type Wallet, aggregateBalanceTone, balanceTone, formatAmount, formatHbDateFr, isBankAccount, isSavingsAccount } from "../lib/homebank";
@@ -18,6 +18,7 @@ export function Dashboard({
   onAdd,
   driveConfigured,
   onOperations,
+  onScheduled,
   onEdit,
 }: {
   wallet: Wallet;
@@ -32,6 +33,7 @@ export function Dashboard({
   onAdd: () => void;
   driveConfigured: boolean;
   onOperations: () => void;
+  onScheduled: () => void;
   onEdit: (transaction: Transaction) => void;
 }) {
   const accountKeys = new Set(accounts.map((account) => account.key));
@@ -66,6 +68,7 @@ export function Dashboard({
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={onAdd}>Ajouter</Button>
           <Button variant="outlined" startIcon={<FolderOpen size={18} />} onClick={onDriveOpen} disabled={!driveConfigured}>Drive</Button>
           <Button startIcon={<ArrowDownToLine size={18} />} onClick={onImport}>Importer</Button>
+          <Button startIcon={<CalendarClock size={18} />} onClick={onScheduled}>Planifications</Button>
         </div>
       </div>
 

@@ -14,6 +14,7 @@ MVP local-first pour l'option A du plan de migration HomeBank.
 - Soldes colores selon le decouvert autorise du compte : vert au-dessus de zero, orange dans le decouvert autorise, rouge sous la limite.
 - Tableau de bord avec les 5 dernieres operations passees et les 5 prochaines operations a venir.
 - Liste des operations avec recherche et filtre par compte.
+- Consultation des operations planifiees : echeancier et recurrences par compte, revenus/depenses prevus, virements internes distincts, filtres et detail en lecture seule.
 - Operations futures grisees dans la liste.
 - Actions rapides pour pointer ou rapprocher une operation.
 - Formulaire d'operation avec champs separes pour tiers, numero de paiement et memo.
@@ -43,6 +44,20 @@ Le formulaire propose `Depense`, `Revenu` et `Virement interne`. Le montant se s
 Les deux operations d'un virement sont creees ou modifiees dans une seule sauvegarde locale et une seule revision Drive. Elles conservent une cle `kxfer` commune, les comptes reciproques et les indicateurs HomeBank (`OF_INTXFER`, `OF_INCOME`, `OF_ADVXFER`). Les statuts pointe/rapproche sont independants pour chaque compte ; l'annulation porte sur les deux operations. Modifier la date met a jour les deux dates ; sinon les dates distinctes d'un virement importe sont conservees. Transformer un virement en depense/revenu retire sa contrepartie.
 
 Les ventilations et les virements importes incomplets, ambigus ou lies a un compte desactive conservent leur structure : leurs montants, comptes et type ne sont pas modifiables.
+
+## Operations planifiees
+
+L'onglet `Planifiees` et le bouton `Planifications` du tableau de bord ouvrent la consultation des planifications actives du fichier HomeBank. Les comptes desactives sont exclus ; les modeles sans recurrence active ne sont pas affiches.
+
+- La synthese affiche les revenus, depenses et flux net prevus sur le reste du mois, les 30 ou les 90 prochains jours, jour courant inclus. Les filtres compte, type et recherche s'appliquent aussi a cette synthese.
+- La comparaison `Par compte` permet d'ouvrir directement les previsions d'un compte. Les devises differentes sont totalisees separement, sans conversion ni addition entre devises.
+- L'onglet `Echeancier` presente les occurrences de la periode, regroupees par compte et triees par date. Les planifications dont la prochaine date est passee sont consultables dans une section distincte `en retard` ; leurs echeances passees sont exclues des totaux de la periode.
+- L'onglet `Recurrences` montre une ligne par planification et par compte concerne, meme si sa prochaine echeance est hors periode. Le detail donne les dates, la frequence, la limite restante, le report week-end, le tiers, le memo et le numero de paiement.
+- Les virements sont exclus des revenus/depenses et affiches comme flux entrants/sortants des comptes concernes. Le flux net les inclut ; un virement entre deux comptes de meme devise s'annule dans la vue generale. Le nombre d'echeances compte les mouvements par compte : un virement visible dans ses deux comptes compte donc deux lignes.
+
+Les champs `recflg`, `nextdate`, `every`, `unit`, `limit`, `weekend`, `gap`, `ordn` et `wkdy` sont interpretes suivant `../homebank-5.10.3/src/hb-template.h`, `hb-template.c` et `hb-xml.c`. Les flags historiques de recurrence anterieurs a HomeBank 5.9 sont aussi lus. Les calculs calendaires utilisent [Temporal.PlainDate](https://tc39.es/proposal-temporal/docs/plaindate.html) via `@js-temporal/polyfill`. Une fois l'application et le portefeuille charges, la consultation ne demande aucun acces reseau supplementaire et reste disponible hors ligne.
+
+Cette premiere version est strictement en lecture seule : pas de creation, edition, suppression, saut d'echeance ni comptabilisation automatique. Les previsions ne changent pas les soldes existants. Les noeuds XML `<fav>` restent conserves tels quels, y compris les attributs non reconnus, les prochaines dates et les limites. Une recurrence invalide ou une projection historique trop longue est signalee comme prevision incomplete plutot que consideree comme une prevision fiable.
 
 ## Google Drive
 

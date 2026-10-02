@@ -1,4 +1,4 @@
-import { Download, FilePlus2, FolderOpen, Home, Info, ListFilter, Moon, Plus, Search, Settings, Sun, Upload, WalletCards } from "lucide-react";
+import { CalendarClock, Download, FilePlus2, FolderOpen, Home, Info, ListFilter, Moon, Plus, Search, Settings, Sun, Upload, WalletCards } from "lucide-react";
 import Avatar from "@mui/material/Avatar";
 import Alert from "@mui/material/Alert";
 import AlertTitle from "@mui/material/AlertTitle";
@@ -30,8 +30,9 @@ import { TransactionForm } from "./components/TransactionForm";
 import { EmptyState, NavButton } from "./components/common";
 import { useAppearance } from "./components/AppearanceProvider";
 import { DriveIndicator, driveConnectionLabels } from "./components/DriveIndicator";
+import ScheduledView from "./components/ScheduledView";
 
-type View = "dashboard" | "transactions" | "add" | "settings";
+type View = "dashboard" | "transactions" | "scheduled" | "add" | "settings";
 
 export function App() {
   const { mode, toggleTheme } = useAppearance();
@@ -136,7 +137,7 @@ export function App() {
       <header className="topbar">
         <div className="page-heading">
           <p className="eyebrow">HomeBank <span className="desktop-owner"> / {wallet.owner || "Mon portefeuille"}</span></p>
-          <h1>{view === "dashboard" ? "Mes comptes" : view === "transactions" ? "Mes operations" : view === "add" ? "Saisie d'operation" : "Mon fichier"}</h1>
+          <h1>{view === "dashboard" ? "Mes comptes" : view === "transactions" ? "Mes operations" : view === "scheduled" ? "Mes planifications" : view === "add" ? "Saisie d'operation" : "Mon fichier"}</h1>
         </div>
         <div className="topbar-actions">
           {driveFile ? <DriveIndicator connection={driveConnection} saving={driveSaving} pending={pendingDriveSave} error={driveError}
@@ -187,8 +188,13 @@ export function App() {
               onAdd={startAdd}
               driveConfigured={googleDriveConfigured()}
               onOperations={() => { setAccountFilter(0); setQuery(""); setView("transactions"); }}
+              onScheduled={() => { setAccountFilter(0); setView("scheduled"); }}
               onEdit={editTransaction}
             />
+          )}
+
+          {view === "scheduled" && (
+            <ScheduledView wallet={wallet} accounts={activeAccounts} categoryLabels={categoryLabelByKey} accountFilter={accountFilter} onAccountFilter={setAccountFilter} />
           )}
 
           {view === "transactions" && (
@@ -334,6 +340,7 @@ export function App() {
         <Tooltip title="Ajouter une operation"><span className="fab-slot"><Fab variant="extended" className="fab" disabled={disabled} onClick={startAdd} aria-label="Ajouter une operation">
           <Plus size={24} /><span>Nouvelle operation</span>
         </Fab></span></Tooltip>
+        <NavButton active={view === "scheduled"} icon={<CalendarClock size={20} />} label={"Planifi\u00e9es"} onClick={() => setView("scheduled")} />
         <NavButton active={view === "settings"} icon={<Settings size={20} />} label="Fichier" onClick={() => setView("settings")} />
         <div className="navigation-file"><FolderOpen size={18} /><span>{wallet.sourceFileName || "Aucun fichier"}<small>{driveFile ? driveConnectionLabels[driveConnection] : "Stockage local"}</small></span></div>
       </nav>
