@@ -52,8 +52,8 @@ export default function ScheduledView({ wallet, accounts, categoryLabels, accoun
   const recurring = nextEntries.filter(matches);
   const overdue = recurring.filter((entry) => entry.date < today);
   const displayed = mode === "calendar" ? projected : recurring;
-  const summary = summarizeScheduledEntries(wallet, projected);
-  const byAccount = summarizeScheduledEntries(wallet, projected, true);
+  const summary = summarizeScheduledEntries(wallet, displayed);
+  const byAccount = summarizeScheduledEntries(wallet, displayed, true);
   const title = accounts.find((account) => account.key === accountFilter)?.name ?? "Tous les comptes";
   const issues = [...parsed.issues, ...forecast.issues];
   const rowsKey = `${mode}-${period}-${accountFilter}-${flow}-${search}`;
@@ -64,21 +64,25 @@ export default function ScheduledView({ wallet, accounts, categoryLabels, accoun
         <div><p className="eyebrow">Pr&eacute;visions</p><h2>{title}</h2></div>
         <Chip size="small" variant="outlined" icon={<Eye size={14} />} label="Lecture seule" />
       </div>
-      <div className="schedule-filters">
+      <Tabs value={mode} onChange={(_event, value: ScheduleMode) => setMode(value)} variant="fullWidth" className="schedule-tabs" aria-label="Vue des planifications">
+        <Tab value="calendar" label={"\u00c9ch\u00e9ancier"} id="schedule-tab-calendar" aria-controls="schedule-content" />
+        <Tab value="recurring" label={"R\u00e9currences"} id="schedule-tab-recurring" aria-controls="schedule-content" />
+      </Tabs>
+      <div className="schedule-filters" data-mode={mode}>
         <TextField select label="Compte" size="small" value={accountFilter} onChange={(event) => onAccountFilter(Number(event.target.value))} slotProps={{ select: { native: true } }}>
           <option value={0}>Tous les comptes</option>
           {accounts.map((account) => <option key={account.key} value={account.key}>{account.name}</option>)}
         </TextField>
-        <TextField select label={"P\u00e9riode"} size="small" value={period} onChange={(event) => setPeriod(event.target.value as SchedulePeriod)} slotProps={{ select: { native: true } }}>
+        {mode === "calendar" && <TextField select label={"P\u00e9riode"} size="small" value={period} onChange={(event) => setPeriod(event.target.value as SchedulePeriod)} slotProps={{ select: { native: true } }}>
           <option value="month">Reste du mois</option><option value="30">30 jours</option><option value="90">90 jours</option>
-        </TextField>
+        </TextField>}
         <TextField select label="Type" size="small" value={flow} onChange={(event) => setFlow(event.target.value as FlowFilter)} slotProps={{ select: { native: true } }}>
           <option value="all">Tous les types</option><option value="expense">D&eacute;penses</option><option value="income">Revenus</option><option value="transfer">Virements internes</option>
         </TextField>
         <TextField label="Rechercher" size="small" value={search} onChange={(event) => setSearch(event.target.value)}
           slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search size={18} /></InputAdornment> } }} />
       </div>
-      <div className="schedule-period"><CalendarClock size={16} /><span>Du {formatHbDateFr(range.start)} au {formatHbDateFr(range.end)}</span><span>{countLabel(projected.length)}</span></div>
+      <div className="schedule-period"><CalendarClock size={16} /><span>{mode === "calendar" ? `Du ${formatHbDateFr(range.start)} au ${formatHbDateFr(range.end)}` : "Prochaines \u00e9ch\u00e9ances"}</span><span>{countLabel(displayed.length)}</span></div>
       {issues.length > 0 && <Alert severity="warning" className="schedule-issues">Pr&eacute;vision incompl&egrave;te<ul>{issues.map((issue, index) => <li key={index}>{issue}</li>)}</ul></Alert>}
       <div className="schedule-forecast" aria-label="Synthese des previsions">
         {(summary.length ? summary : [{ accountKey: accountFilter || accounts[0]?.key || 0, currencyKey: wallet.baseCurrencyKey, income: 0, expenses: 0, transferIn: 0, transferOut: 0, count: 0 }]).map((total) => (
@@ -101,10 +105,6 @@ export default function ScheduledView({ wallet, accounts, categoryLabels, accoun
           })}
         </section>
       )}
-      <Tabs value={mode} onChange={(_event, value: ScheduleMode) => setMode(value)} variant="fullWidth" className="schedule-tabs" aria-label="Vue des planifications">
-        <Tab value="calendar" label={"\u00c9ch\u00e9ancier"} id="schedule-tab-calendar" aria-controls="schedule-content" />
-        <Tab value="recurring" label={"R\u00e9currences"} id="schedule-tab-recurring" aria-controls="schedule-content" />
-      </Tabs>
       <div role="tabpanel" id="schedule-content" aria-labelledby={`schedule-tab-${mode}`}>
         {mode === "calendar" && overdue.length > 0 && <Accordion className="schedule-overdue" disableGutters>
           <AccordionSummary expandIcon={<ChevronDown size={18} />}><span>{overdue.length} planification{overdue.length === 1 ? "" : "s"} en retard</span></AccordionSummary>

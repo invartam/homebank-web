@@ -1,4 +1,4 @@
-import { parseHomeBankXml } from "../src/lib/homebank";
+import { isoToHbDate, parseHomeBankXml } from "../src/lib/homebank";
 
 export const sampleXml = `<?xml version="1.0"?>
 <homebank v="1.6" d="51003">
@@ -34,4 +34,12 @@ export const scheduledXml = sampleXml.replace("</homebank>", `
   <fav key="17" account="3" amount="-999" recflg="1" nextdate="739890" every="1" unit="2" wording="Operation compte ferme"/>
   <fav key="18" account="1" amount="-999" recflg="0" nextdate="739890" every="1" unit="2" wording="Modele sans recurrence"/>
   <fav key="19" account="1" amount="-25" recflg="5" nextdate="739919" every="1" unit="2" ordn="5" wkdy="5" wording="Dernier vendredi"/>
+</homebank>`);
+
+export const nextMonthScheduledXml = sampleXml.replace("</homebank>", `
+  <fav key="20" account="1" dst_account="2" flags="8" amount="-7.27" recflg="1" nextdate="${isoToHbDate("2026-11-04")}" every="1" unit="2" wording="Virement assurance pret"/>
+  <fav key="21" account="1" dst_account="2" flags="8" amount="-12.28" recflg="1" nextdate="${isoToHbDate("2026-11-04")}" every="1" unit="2" wording="Virement assurance habitation"/>
+  <fav key="22" account="1" amount="-70" recflg="1" nextdate="${isoToHbDate("2026-11-09")}" every="1" unit="2" wording="Energie"/>
+  <fav key="23" account="1" amount="-20.99" recflg="1" nextdate="${isoToHbDate("2026-11-16")}" every="1" unit="2" wording="Telephone"/>
+  <fav key="24" account="1" amount="-39" recflg="1" nextdate="${isoToHbDate("2026-11-16")}" every="1" unit="2" wording="Impots"/>
 </homebank>`);

@@ -271,6 +271,7 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
 
 .scheduled-view { min-width: 0; }
 .schedule-filters { display: grid; grid-template-columns: 1fr 1fr 1fr 1.4fr; gap: 16px; margin: 24px 0 16px; }
+.schedule-filters[data-mode="recurring"] { grid-template-columns: 1fr 1fr 1.4fr; }
 .schedule-filters > * { min-width: 0; }
 .schedule-period { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; margin-bottom: 24px; }
 .schedule-period > span:last-child { margin-left: auto; }
@@ -360,6 +361,8 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
   .fab-slot { order: 0; width: 52px; height: 52px; justify-self: center; }
   .fab > span:not(.MuiTouchRipple-root) { display: none; }
   .schedule-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-filters[data-mode="recurring"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-filters[data-mode="recurring"] > :last-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 600px) {
