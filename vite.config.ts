@@ -1,10 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react],
+  envDir: mode === "native" ? false : undefined,
+  envPrefix: mode === "native" ? "NATIVE_UNUSED_" : "VITE_",
+  define: { "import.meta.env.VITE_NATIVE_APP": JSON.stringify(mode === "native") },
   build: {
+    outDir: mode === "native" ? "dist-native" : "dist",
     rollupOptions: {
+      input: mode === "native" ? "native.html" : "index.html",
       onwarn(warning, warn) {
         if (warning.code === "MODULE_LEVEL_DIRECTIVE" && warning.message.includes('"use client"') && warning.id?.includes("/node_modules/@mui/")) return;
         warn(warning);
@@ -17,4 +22,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

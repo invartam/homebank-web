@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DriveApiError, DriveAuthorizationError, DriveFileUnavailableError, downloadDriveFile, driveAccessTokenExpiresAt, requestDriveAccessToken, saveWalletToDrive, verifyDriveFile } from "../src/lib/googleDrive";
+import { DriveApiError, DriveAuthorizationError, DriveFileUnavailableError, downloadDriveFile, driveAccessTokenExpiresAt, googleDriveConfigured, pickDriveHomeBankFile, requestDriveAccessToken, saveWalletToDrive, verifyDriveFile } from "../src/lib/googleDrive";
 import { sampleWallet } from "./fixtures";
 
 describe("Google Drive adapter", () => {
@@ -36,7 +36,43 @@ describe("Google Drive adapter", () => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     delete window.google;
+    delete window.homebankDrive;
     vi.useRealTimers();
+  });
+
+  it("routes Electron Drive through the restricted bridge without renderer tokens or network calls", async () => {
+    vi.stubEnv("VITE_NATIVE_APP", true);
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const expiresAt = Date.now() + 3600000;
+    window.homebankDrive = {
+      configured: true,
+      authorize: vi.fn(async () => ({ ok: true as const, value: { expiresAt } })),
+      pick: vi.fn(async () => ({ ok: true as const, value: { file: { id: "desktop-file", name: "demo.xhb" }, expiresAt } })),
+      verify: vi.fn(async () => ({ ok: true as const, value: undefined })),
+      download: vi.fn(async () => ({ ok: true as const, value: "<homebank/>" })),
+      save: vi.fn(async () => ({ ok: true as const, value: undefined })),
+    };
+    expect(googleDriveConfigured()).toBe(true);
+    const token = await requestDriveAccessToken("none");
+    expect(token).toBe("electron-drive-session");
+    expect(driveAccessTokenExpiresAt(token)).toBe(expiresAt);
+    const picked = await pickDriveHomeBankFile();
+    expect(picked.file.id).toBe("desktop-file");
+    await verifyDriveFile(picked.file, token);
+    expect(await downloadDriveFile(picked.file.id, token)).toBe("<homebank/>");
+    await saveWalletToDrive(sampleWallet(), picked.file, token);
+    expect(window.homebankDrive.save).toHaveBeenCalledWith("desktop-file", expect.stringContaining("<homebank"));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it("maps desktop errors to the existing recovery types and keeps mobile Drive disabled", async () => {
+    vi.stubEnv("VITE_NATIVE_APP", true);
+    expect(googleDriveConfigured()).toBe(false);
+    const fail = vi.fn(async () => ({ ok: false as const, error: { kind: "api" as const, message: "Missing", status: 404, retryable: false } }));
+    window.homebankDrive = { configured: true, verify: fail } as unknown as Window["homebankDrive"];
+    await expect(verifyDriveFile({ id: "file", name: "demo" }, "session")).rejects.toBeInstanceOf(DriveFileUnavailableError);
+    window.homebankDrive!.authorize = vi.fn(async () => ({ ok: false, error: { kind: "authorization", message: "Reconnect", requiresInteraction: true } }));
+    await expect(requestDriveAccessToken("none")).rejects.toBeInstanceOf(DriveAuthorizationError);
   });
 
   it("settles authentication when a popup is closed", async () => {

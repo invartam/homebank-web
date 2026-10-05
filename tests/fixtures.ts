@@ -43,3 +43,12 @@ export const nextMonthScheduledXml = sampleXml.replace("</homebank>", `
   <fav key="23" account="1" amount="-20.99" recflg="1" nextdate="${isoToHbDate("2026-11-16")}" every="1" unit="2" wording="Telephone"/>
   <fav key="24" account="1" amount="-39" recflg="1" nextdate="${isoToHbDate("2026-11-16")}" every="1" unit="2" wording="Impots"/>
 </homebank>`);
+
+export const calendarHistoryXml = sampleXml.replace("</homebank>", `
+  <ope date="${isoToHbDate("2026-09-15")}" account="1" amount="1000" st="2" flags="2" wording="Salaire historique"/>
+  <ope date="${isoToHbDate("2026-10-01")}" account="1" amount="200" st="0" flags="2" wording="Versement du jour"/>
+  <ope date="${isoToHbDate("2026-10-05")}" account="1" amount="-888" st="2" wording="Operation future postee"/>
+  <ope date="${isoToHbDate("2026-09-16")}" account="3" amount="-100" st="2" wording="Compte ferme exclu"/>
+  <fav key="30" account="1" amount="-10" recflg="1" nextdate="${isoToHbDate("2026-09-20")}" every="1" unit="0" wording="Prelevement quotidien"/>
+  <fav key="31" account="1" amount="800" recflg="1" nextdate="${isoToHbDate("2026-10-15")}" every="1" unit="2" wording="Revenu planifie"/>
+</homebank>`);

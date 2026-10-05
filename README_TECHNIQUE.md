@@ -2,6 +2,8 @@
 
 Installation, compilation, deploiement et maintenance de la SPA HomeBank Web. La presentation du logiciel et ses captures d'ecran sont dans le [README principal](README.md).
 
+Pour les installateurs Electron macOS/Windows, les applications Capacitor iOS/Android, les signatures et les releases GitHub versionnees, consulter le [guide de packaging](README_PACKAGING.md).
+
 ## Sommaire
 
 - [Installation et lancement](#installation-et-lancement)
@@ -116,14 +118,24 @@ Les deux operations d'un virement sont creees ou modifiees dans une seule sauveg
 
 Les ventilations et les virements importes incomplets, ambigus ou lies a un compte desactive conservent leur structure : leurs montants, comptes et type ne sont pas modifiables.
 
+### Consultation des comptes clos
+
+Les vues `Operations` et `Planifiees > Echeancier` proposent un controle `Inclure les comptes clos`, desactive par defaut et independant pour chaque vue. Les comptes clos sont identifies par `(clos)` dans le filtre. Les operations saisies, les totaux et, dans le calendrier, les previsions suivent les comptes inclus. Les operations des comptes clos sont consultables en lecture seule dans la liste des operations ; la saisie reste reservee aux comptes ouverts.
+
+Masquer les comptes clos alors qu'un compte clos est selectionne remet le filtre sur `Tous les comptes`. L'onglet `Recurrences` reste limite aux comptes ouverts. Le tableau de bord `Comptes`, ses soldes et son activite recente ne sont jamais affectes par ces controles. Les preferences sont limitees a la session d'affichage, sans modifier les flags des comptes ni le fichier HomeBank.
+
 ### Operations planifiees
 
-L'onglet `Planifiees` et le bouton `Planifications` du tableau de bord ouvrent la consultation des planifications actives du fichier HomeBank. Les comptes desactives sont exclus ; les modeles sans recurrence active ne sont pas affiches.
+L'onglet `Planifiees` et le bouton `Planifications` du tableau de bord ouvrent la consultation des planifications actives du fichier HomeBank. Les comptes clos sont exclus par defaut et peuvent etre inclus dans l'echeancier ; les modeles sans recurrence active ne sont pas affiches.
 
 - La synthese et la comparaison par compte totalisent les echeances de l'onglet actif. Les filtres compte, type et recherche s'appliquent aussi aux totaux et au nombre d'echeances.
 - La comparaison `Par compte` permet d'ouvrir directement les previsions d'un compte. Les devises differentes sont totalisees separement, sans conversion ni addition entre devises.
-- L'onglet `Echeancier` presente et totalise les occurrences de la periode : reste du mois, 30 ou 90 prochains jours, jour courant inclus. Elles sont regroupees par compte et triees par date. Les planifications dont la prochaine date est passee sont consultables dans une section distincte `en retard` ; leurs echeances passees sont exclues des totaux de la periode.
-- L'onglet `Recurrences` montre et totalise une prochaine echeance par planification et par compte concerne, y compris les echeances hors du mois courant et celles en retard. Il n'applique pas de filtre de periode : ces totaux ne sont pas des moyennes mensuelles. La periode choisie est conservee pour le retour a l'echeancier. Le detail donne les dates, la frequence, la limite restante, le report week-end, le tiers, le memo et le numero de paiement.
+- L'onglet `Echeancier` est un calendrier : vue mensuelle du lundi au dimanche sur six semaines, et vue annuelle avec douze mois. Les fleches parcourent les mois ou annees ; `Aujourd'hui` revient a la periode courante. Un clic sur un jour ou un mois ouvre la liste des operations ; le detail annuel propose `Voir le mois`.
+- Les operations saisies, non annulees et liees aux comptes inclus sont comptabilisees quelle que soit leur date, y compris les operations futures deja postees. A partir de demain, les occurrences encore planifiees s'y ajoutent. Aucune occurrence n'est generee avant la prochaine date de sa planification.
+- Les mois passes utilisent exclusivement les operations saisies ; les mois futurs combinent les operations deja postees et les previsions. La prochaine date HomeBank delimite les echeances restantes : aucune fusion heuristique par date, tiers ou montant n'est appliquee entre une saisie et une prevision.
+- Dans les cases du calendrier, les virements internes affichent separement la somme des montants entrants et sortants, sans les annuler en un net nul. Le flux net de la synthese reste calcule avec la difference entre ces deux sommes. Les devises restent separees.
+- Chaque case affiche les revenus et depenses, avec les virements separes. Sur les petits ecrans, les montants journaliers sont abreges ; les libelles accessibles, les infobulles et le dialogue conservent les montants precis. Les fleches du clavier parcourent les cases, `Home` et `End` atteignent la premiere et derniere case de la periode.
+- L'onglet `Recurrences` montre et totalise une prochaine echeance par planification et par compte concerne, y compris les echeances hors du mois courant et celles en retard. Il n'applique pas de filtre de periode : ces totaux ne sont pas des moyennes mensuelles. Le calendrier conserve sa navigation au retour depuis les recurrences. Le detail donne les dates, la frequence, la limite restante, le report week-end, le tiers, le memo et le numero de paiement.
 - Les virements sont exclus des revenus/depenses et affiches comme flux entrants/sortants des comptes concernes. Le flux net les inclut ; un virement entre deux comptes de meme devise s'annule dans la vue generale. Le nombre d'echeances compte les mouvements par compte : un virement visible dans ses deux comptes compte donc deux lignes.
 
 Les champs `recflg`, `nextdate`, `every`, `unit`, `limit`, `weekend`, `gap`, `ordn` et `wkdy` sont interpretes suivant `../homebank-5.10.3/src/hb-template.h`, `hb-template.c` et `hb-xml.c`. Les flags historiques de recurrence anterieurs a HomeBank 5.9 sont aussi lus. Les calculs calendaires utilisent [Temporal.PlainDate](https://tc39.es/proposal-temporal/docs/plaindate.html) via `@js-temporal/polyfill`. Une fois l'application et le portefeuille charges, la consultation ne demande aucun acces reseau supplementaire et reste disponible hors ligne.
@@ -131,6 +143,8 @@ Les champs `recflg`, `nextdate`, `every`, `unit`, `limit`, `weekend`, `gap`, `or
 Cette premiere version est strictement en lecture seule : pas de creation, edition, suppression, saut d'echeance ni comptabilisation automatique. Les previsions ne changent pas les soldes existants. Les noeuds XML `<fav>` restent conserves tels quels, y compris les attributs non reconnus, les prochaines dates et les limites. Une recurrence invalide ou une projection historique trop longue est signalee comme prevision incomplete plutot que consideree comme une prevision fiable.
 
 ## Google Drive
+
+Cette section de configuration OAuth/Picker concerne la version **web**. Pour **Electron**, utiliser un client Google de type Desktop et suivre [Google Drive dans Electron](README_PACKAGING.md#google-drive-dans-electron) : connexion dans le navigateur systeme, renouvellement automatique et jeton de renouvellement chiffre par le systeme. Les versions iOS/Android ne prennent pas encore Drive en charge.
 
 ### Connexion et reprise automatique
 
@@ -276,6 +290,8 @@ Le port local `4174` doit etre disponible. Ne pas deployer le build aux identifi
 - `src/lib/homebank.ts` : import/export XML, dates, devises et calculs de soldes.
 - `src/lib/wallet.ts` : types d'operations, creation/edition atomique des virements, tiers, categories et operations recentes.
 - `src/lib/scheduled.ts` : lecture et projection des planifications, regroupements et totaux.
+- `src/lib/calendar.ts` : frontiere historique/previsions, periodes et grille du calendrier, totaux par devise.
+- `src/components/ScheduledCalendar.tsx` : calendrier mensuel/annuel, navigation et listes des operations selectionnees.
 - `src/lib/walletController.ts` : restauration et file de sauvegarde, independantes de React.
 - `src/lib/storage.ts` : persistance atomique du portefeuille, du fichier Drive et de l'etat de synchronisation.
 - `src/lib/googleDrive.ts` : adaptateur OAuth, Picker et API Drive.

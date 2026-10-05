@@ -15,6 +15,6 @@ createRoot(document.getElementById("root") as HTMLElement).render(
   </React.StrictMode>,
 );
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
+if ("serviceWorker" in navigator && import.meta.env.PROD && !import.meta.env.VITE_NATIVE_APP) {
   navigator.serviceWorker.register("/sw.js").catch(() => undefined);
 }

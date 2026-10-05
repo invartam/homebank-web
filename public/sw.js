@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "homebank-web-mvp-";
-const CACHE_NAME = `${CACHE_PREFIX}v17`;
+const CACHE_NAME = `${CACHE_PREFIX}v20`;
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {

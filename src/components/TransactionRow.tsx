@@ -11,6 +11,7 @@ export function TransactionRow({
   categoryName,
   payeeName,
   isFuture,
+  readOnly = false,
   onEdit,
   onMark,
 }: {
@@ -20,6 +21,7 @@ export function TransactionRow({
   categoryName: string;
   payeeName?: string;
   isFuture: boolean;
+  readOnly?: boolean;
   onEdit: (transaction: Transaction) => void;
   onMark: (transaction: Transaction, status: Transaction["status"]) => void;
 }) {
@@ -27,7 +29,7 @@ export function TransactionRow({
   const description = type === "transfer" ? transferLabel(wallet, txn) : categoryName;
   return (
     <div className={isFuture ? "transaction-row future" : "transaction-row"}>
-      <ButtonBase className="transaction-main" onClick={() => onEdit(txn)} type="button">
+      <ButtonBase className="transaction-main" onClick={() => onEdit(txn)} type="button" disabled={readOnly}>
         <span className="date-pill">{formatHbDateFr(txn.date, { day: "2-digit", month: "2-digit" })}</span>
         <span className="transaction-description">
           <strong>{type === "transfer" ? txn.memo || description : payeeName || txn.memo || "Operation"}</strong>
@@ -38,15 +40,16 @@ export function TransactionRow({
         <span className={txn.amount < 0 ? "amount negative" : "amount positive"}>
           {formatAmount(wallet, txn.accountKey, txn.amount)}
         </span>
-        <Pencil size={16} className="edit-indicator" aria-hidden="true" />
+        {!readOnly && <Pencil size={16} className="edit-indicator" aria-hidden="true" />}
       </ButtonBase>
       <div className="transaction-actions">
-        {txn.status === "none" && (
+        {readOnly && <span className="transaction-status">Compte clos</span>}
+        {!readOnly && txn.status === "none" && (
           <Button startIcon={<Check size={16} />} size="small" onClick={() => onMark(txn, "cleared")} type="button">
             Pointer
           </Button>
         )}
-        {txn.status !== "reconciled" && txn.status !== "void" && (
+        {!readOnly && txn.status !== "reconciled" && txn.status !== "void" && (
           <Button startIcon={<CheckCheck size={16} />} size="small" onClick={() => onMark(txn, "reconciled")} type="button">
             Rapprocher
           </Button>

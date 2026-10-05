@@ -1,0 +1,201 @@
+name: Packages et Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: packages-${{ github.ref }}
+  cancel-in-progress: false
+env:
+  BUILD_NUMBER: ${{ github.run_number }}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run release:check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+        env:
+          E2E_PREVIEW: '1'
+
+  desktop:
+    needs: validate
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: mac
+            arch: arm64
+          - os: macos-15
+            target: mac
+            arch: x64
+          - os: windows-latest
+            target: windows
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Packages Electron
+        run: npm run desktop:${{ matrix.target }} -- ${{ matrix.arch }}
+        env:
+          CSC_LINK: ${{ matrix.target == 'mac' && secrets.MAC_CSC_LINK || matrix.target == 'windows' && secrets.WIN_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.target == 'mac' && secrets.MAC_CSC_KEY_PASSWORD || matrix.target == 'windows' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ELECTRON_GOOGLE_CLIENT_ID: ${{ vars.ELECTRON_GOOGLE_CLIENT_ID }}
+          ELECTRON_GOOGLE_CLIENT_SECRET: ${{ secrets.ELECTRON_GOOGLE_CLIENT_SECRET }}
+      - run: npm run desktop:smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}-${{ matrix.arch }}
+          path: |
+            release/desktop/*.dmg
+            release/desktop/*.exe
+            release/desktop/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  android:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci
+      - name: Installer le SDK Android
+        run: |
+          set +o pipefail
+          yes | sdkmanager --licenses > /dev/null
+          set -o pipefail
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: APK de test (execution manuelle)
+        if: github.ref_type != 'tag'
+        run: npm run android:debug
+      - name: APK et AAB signes (release)
+        if: github.ref_type == 'tag'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/homebank-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          node -e "const fs = require('fs'); if (!process.env.ANDROID_KEYSTORE_BASE64) throw Error('Secret ANDROID_KEYSTORE_BASE64 requis'); fs.writeFileSync(process.env.ANDROID_KEYSTORE_PATH, Buffer.from(process.env.ANDROID_KEYSTORE_BASE64, 'base64'), { mode: 0o600 });"
+          npm run android:release
+      - name: Supprimer la cle temporaire
+        if: always()
+        run: rm -f "$RUNNER_TEMP/homebank-release.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: |
+            release/android/*.apk
+            release/android/*.aab
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    needs: validate
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: xcodebuild -version
+      - name: Simulateur (execution manuelle)
+        if: github.ref_type != 'tag'
+        run: npm run ios:simulator
+      - name: Installer la signature Ad Hoc
+        if: github.ref_type == 'tag'
+        run: node scripts/ios-signing.mjs install
+        env:
+          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+      - name: IPA Ad Hoc
+        if: github.ref_type == 'tag'
+        run: npm run ios:adhoc
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          IOS_PROFILE_PATH: ${{ github.workspace }}/.packaging/signing/adhoc.mobileprovision
+          IOS_KEYCHAIN_PATH: ${{ github.workspace }}/.packaging/signing/ios-build.keychain-db
+      - name: Supprimer la signature temporaire
+        if: always() && github.ref_type == 'tag'
+        run: node scripts/ios-signing.mjs cleanup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: |
+            release/ios/*.ipa
+            release/ios/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [validate, desktop, android, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: release/desktop
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: android
+          path: release/android
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios
+          path: release/ios
+      - run: npm run release:manifest
+      - name: Publier tous les packages
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t assets < <(find release -type f | sort)
+          args=(--verify-tag --generate-notes --title "HomeBank Web $GITHUB_REF_NAME")
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then args+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" "${args[@]}"

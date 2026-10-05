@@ -1,7 +1,16 @@
 node_modules/
 dist/
+dist-native/
+.packaging/
+release/
+native/
+*.p12
+*.mobileprovision
+*.jks
+*.keystore
 .env.local
 .env.*.local
+electron-drive.local.json
 test-results/
 playwright-report/
 .DS_Store

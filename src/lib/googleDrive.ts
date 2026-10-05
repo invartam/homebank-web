@@ -1,4 +1,5 @@
 import { serializeHomeBankXml, type Wallet } from "./homebank";
+import { electronDrive, type DesktopDriveResult } from "./electronDrive";
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const XHB_MIME_TYPE = "application/x-homebank+xml";
@@ -65,7 +66,24 @@ export interface DriveFileRef {
 }
 
 export const googleDriveConfigured = () =>
-  Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_API_KEY);
+  electronDrive()?.configured ?? (!import.meta.env.VITE_NATIVE_APP && Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_API_KEY));
+
+const DESKTOP_SESSION = "electron-drive-session";
+async function desktopResult<T>(result: Promise<DesktopDriveResult<T>>): Promise<T> {
+  const response = await result;
+  if (response.ok) return response.value;
+  const error = response.error;
+  if (error.kind === "authorization") throw new DriveAuthorizationError(error.message, error.requiresInteraction);
+  if (error.kind === "api") {
+    if (error.status === 404) throw new DriveFileUnavailableError(error.message);
+    throw new DriveApiError(error.message, error.status ?? 500, error.retryable ?? false);
+  }
+  throw new Error(error.message);
+}
+function rememberDesktopSession(expiresAt: number) {
+  issuedToken = { value: DESKTOP_SESSION, expiresAt };
+  return DESKTOP_SESSION;
+}
 
 const googleClientId = () => import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 const googleApiKey = () => import.meta.env.VITE_GOOGLE_API_KEY as string;
@@ -112,6 +130,11 @@ const waitForGoogleIdentity = () =>
 
 export const requestDriveAccessToken = (prompt: "" | "consent" | "none" = "") =>
   new Promise<string>((resolve, reject) => {
+    const desktop = electronDrive();
+    if (desktop) {
+      desktopResult(desktop.authorize(prompt)).then(({ expiresAt }) => resolve(rememberDesktopSession(expiresAt)), reject);
+      return;
+    }
     if (!googleDriveConfigured()) {
       reject(new Error("Configure VITE_GOOGLE_CLIENT_ID et VITE_GOOGLE_API_KEY pour activer Google Drive."));
       return;
@@ -157,6 +180,11 @@ export const requestDriveAccessToken = (prompt: "" | "consent" | "none" = "") =>
   });
 
 export const pickDriveHomeBankFile = async (): Promise<{ file: DriveFileRef; accessToken: string }> => {
+  const desktop = electronDrive();
+  if (desktop) {
+    const result = await desktopResult(desktop.pick());
+    return { file: result.file, accessToken: rememberDesktopSession(result.expiresAt) };
+  }
   const accessToken = await requestDriveAccessToken("consent");
   await loadGapiPicker();
 
@@ -203,6 +231,8 @@ export const pickDriveHomeBankFile = async (): Promise<{ file: DriveFileRef; acc
 };
 
 export const verifyDriveFile = async (file: DriveFileRef, accessToken: string): Promise<void> => {
+  const desktop = electronDrive();
+  if (desktop) return desktopResult(desktop.verify(file.id));
   const query = new URLSearchParams({ fields: "id,trashed" });
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?${query}`, {
     cache: "no-store",
@@ -216,6 +246,8 @@ export const verifyDriveFile = async (file: DriveFileRef, accessToken: string): 
 };
 
 export const downloadDriveFile = async (fileId: string, accessToken: string) => {
+  const desktop = electronDrive();
+  if (desktop) return desktopResult(desktop.download(fileId));
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
     cache: "no-store",
     signal: AbortSignal.timeout(30000),
@@ -232,6 +264,8 @@ export const downloadDriveFile = async (fileId: string, accessToken: string) => 
 };
 
 export const saveWalletToDrive = async (wallet: Wallet, file: DriveFileRef, accessToken: string) => {
+  const desktop = electronDrive();
+  if (desktop) return desktopResult(desktop.save(file.id, serializeHomeBankXml(wallet)));
   const response = await fetch(
     `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(file.id)}?uploadType=media`,
     {

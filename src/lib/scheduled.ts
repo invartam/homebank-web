@@ -67,10 +67,10 @@ function integerAttribute(node: RawNode, name: string, fallback = 0) {
   return value;
 }
 
-export function readScheduledOperations(wallet: Wallet) {
+export function readScheduledOperations(wallet: Wallet, includeClosed = false) {
   const operations: ScheduledOperation[] = [];
   const issues: string[] = [];
-  const active = new Set(visibleAccounts(wallet).map((account) => account.key));
+  const active = new Set((includeClosed ? wallet.accounts : visibleAccounts(wallet)).map((account) => account.key));
   wallet.templates.forEach((node, index) => {
     try {
       // Older HomeBank files stored the recurrence bits in the transaction flags.
@@ -154,12 +154,12 @@ export function scheduleRange(today: number, period: SchedulePeriod) {
   return { start: today, end: hbDate(period === "month" ? date.with({ day: date.daysInMonth }) : date.add({ days: Number(period) - 1 })) };
 }
 
-export function scheduledEntries(wallet: Wallet, operation: ScheduledOperation, date = scheduledPostDate(operation.nextDate, operation.weekend), suffix = "next"): ScheduledEntry[] {
+export function scheduledEntries(wallet: Wallet, operation: ScheduledOperation, date = scheduledPostDate(operation.nextDate, operation.weekend), suffix = "next", includeClosed = false): ScheduledEntry[] {
   const entries: ScheduledEntry[] = [{ id: `${operation.id}-${suffix}-${operation.accountKey}`, operation, accountKey: operation.accountKey,
     counterpartAccountKey: operation.type === "transfer" ? operation.destinationAccountKey : 0, amount: operation.amount, date }];
   if (operation.type === "transfer") {
     const source = wallet.accounts.find((account) => account.key === operation.accountKey);
-    const destination = visibleAccounts(wallet).find((account) => account.key === operation.destinationAccountKey);
+    const destination = (includeClosed ? wallet.accounts : visibleAccounts(wallet)).find((account) => account.key === operation.destinationAccountKey);
     if (destination && destination.key !== operation.accountKey) {
       const amount = source?.currencyKey === destination.currencyKey ? -operation.amount : operation.transferAmount;
       if (amount && Math.sign(amount) !== Math.sign(operation.amount)) entries.push({
@@ -171,7 +171,7 @@ export function scheduledEntries(wallet: Wallet, operation: ScheduledOperation, 
   return entries;
 }
 
-export function projectScheduledOperations(wallet: Wallet, operations: ScheduledOperation[], start: number, end: number) {
+export function projectScheduledOperations(wallet: Wallet, operations: ScheduledOperation[], start: number, end: number, includeClosed = false) {
   const entries: ScheduledEntry[] = [];
   const issues: string[] = [];
   let overdueCount = 0;
@@ -184,7 +184,7 @@ export function projectScheduledOperations(wallet: Wallet, operations: Scheduled
         if (step >= MAX_STEPS) throw new Error("Trop d'echeances anciennes : prevision incomplete.");
         const date = scheduledPostDate(hbDate(current), operation.weekend);
         if (date < start) overdueCount++;
-        if (date >= start && date <= end) entries.push(...scheduledEntries(wallet, operation, date, String(step)));
+        if (date >= start && date <= end) entries.push(...scheduledEntries(wallet, operation, date, String(step), includeClosed));
         const advanced = advance(operation, current, gap);
         if (Temporal.PlainDate.compare(advanced.next, current) <= 0) throw new Error("La recurrence n'avance pas.");
         current = advanced.next;
@@ -194,7 +194,7 @@ export function projectScheduledOperations(wallet: Wallet, operations: Scheduled
     } catch (error) {
       issues.push(`${operation.memo || "Planification"} : ${error instanceof Error ? error.message : "Prevision impossible."}`);
     }
-    if (operation.type === "transfer" && scheduledEntries(wallet, operation).length !== 2) {
+    if (operation.type === "transfer" && scheduledEntries(wallet, operation, undefined, undefined, includeClosed).length !== 2) {
       issues.push(`${operation.memo || "Virement"} : compte lie indisponible ou montant lie invalide.`);
     }
   }
@@ -202,7 +202,9 @@ export function projectScheduledOperations(wallet: Wallet, operations: Scheduled
   return { entries, overdueCount, issues };
 }
 
-export function summarizeScheduledEntries(wallet: Wallet, entries: ScheduledEntry[], byAccount = false) {
+export function summarizeScheduledEntries(wallet: Wallet, entries: ReadonlyArray<{
+  accountKey: number; amount: number; operation: Pick<ScheduledOperation, "type">;
+}>, byAccount = false) {
   const totals = new Map<number, ForecastTotals>();
   for (const entry of entries) {
     const currencyKey = currencyForAccount(wallet, entry.accountKey)?.key ?? wallet.baseCurrencyKey;

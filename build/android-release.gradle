@@ -1,0 +1,18 @@
+gradle.beforeProject { app ->
+  app.plugins.withId('com.android.application') {
+    app.extensions.getByName('androidComponents').finalizeDsl { android ->
+    android.defaultConfig.versionName = System.getenv('APP_VERSION')
+    android.defaultConfig.versionCode = Integer.parseInt(System.getenv('BUILD_NUMBER'))
+    android.buildTypes.debug.applicationIdSuffix = '.debug'
+    android.buildTypes.debug.versionNameSuffix = '-debug'
+    if (System.getenv('ANDROID_KEYSTORE_PATH')) {
+        def signing = android.signingConfigs.maybeCreate('distribution')
+        signing.storeFile = new File(System.getenv('ANDROID_KEYSTORE_PATH'))
+        signing.storePassword = System.getenv('ANDROID_KEYSTORE_PASSWORD')
+        signing.keyAlias = System.getenv('ANDROID_KEY_ALIAS')
+        signing.keyPassword = System.getenv('ANDROID_KEY_PASSWORD')
+        android.buildTypes.release.signingConfig = signing
+    }
+    }
+  }
+}

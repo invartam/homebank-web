@@ -25,6 +25,8 @@ Retrouvez l'essentiel dès l'ouverture : vos comptes actifs, votre épargne et l
 
 Les comptes désactivés restent dans votre fichier HomeBank, mais ne viennent pas encombrer votre tableau de bord.
 
+Besoin de consulter un ancien compte ? Activez **Inclure les comptes clos** dans la vue Opérations ou dans le calendrier de l'Échéancier. Vos archives deviennent consultables sans modifier la page Comptes, qui reste réservée aux comptes ouverts.
+
 ## Pensé pour le quotidien sur mobile
 
 Une dépense à noter après un achat ? Un revenu à enregistrer ? Un virement entre deux comptes ? La saisie reste accessible depuis la navigation, avec des champs distincts pour le tiers, le numéro de paiement et le mémo.
@@ -50,15 +52,19 @@ Une dépense à noter après un achat ? Un revenu à enregistrer ? Un virement e
 
 Loyers, abonnements, revenus récurrents ou épargne régulière : consultez les planifications de votre fichier, regroupées par compte, avec une vue d'ensemble des revenus, dépenses et flux nets prévus.
 
-![Écran des opérations planifiées : prévisions de revenus et dépenses, comparaison par compte et échéancier](docs/screenshots/planifications-desktop.png)
+![Calendrier mensuel des opérations : revenus et dépenses par jour, historique et prévisions](docs/screenshots/planifications-desktop.png)
 
-- **Échéancier** : les occurrences du reste du mois ou des 30 et 90 prochains jours.
+- **Calendrier mensuel** : revenus et dépenses par jour, avec la liste des opérations au clic.
+- **Calendrier annuel** : totaux par mois, détail des opérations et accès au calendrier du mois sélectionné.
+- **Historique et prévisions** : toutes les opérations inscrites dans les comptes sont visibles, même avec une date future. À partir de demain, les échéances encore planifiées s'y ajoutent. Les virements affichent leurs totaux entrants et sortants séparément.
 - **Récurrences** : la prochaine échéance de chaque planification, même au-delà du mois courant.
 - **Vue générale ou par compte** : les totaux suivent l'onglet et les filtres sélectionnés.
 - **Virements internes distincts** : ils participent au flux net sans gonfler les revenus ou les dépenses.
 - **Détail des planifications** : fréquence, échéances restantes, report du week-end et informations de l'opération.
 
 La consultation des planifications est actuellement en lecture seule : elle ne crée pas d'opérations et ne change pas les soldes.
+
+![Calendrier annuel : agrégation mensuelle des revenus et dépenses, avec distinction des mois passés et futurs](docs/screenshots/planifications-annuel-desktop.png)
 
 ## Votre fichier, votre façon de travailler
 
@@ -77,6 +83,8 @@ HomeBank Web ne se connecte pas directement à votre banque : il travaille sur v
 3. Consultez vos comptes, ajoutez vos opérations et retrouvez vos planifications.
 
 Pour lancer l'application sur votre machine ou la publier : **[guide technique d'installation et de déploiement](README_TECHNIQUE.md)**.
+
+Pour générer les installateurs macOS/Windows, les applications iOS/Android et les releases GitHub : **[guide de packaging](README_PACKAGING.md)**, avec les prérequis de signature et les limites de l'intégration Drive native.
 
 ## Une première version déjà utilisable
 

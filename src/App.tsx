@@ -18,7 +18,7 @@ import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
 import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { type Transaction, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
+import { type Transaction, isClosedAccount, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
 import { googleDriveConfigured } from "./lib/googleDrive";
 import { newTransaction, todayHbDate } from "./lib/wallet";
 import { useWallet } from "./hooks/useWallet";
@@ -31,6 +31,8 @@ import { EmptyState, NavButton } from "./components/common";
 import { useAppearance } from "./components/AppearanceProvider";
 import { DriveIndicator, driveConnectionLabels } from "./components/DriveIndicator";
 import ScheduledView from "./components/ScheduledView";
+import { ClosedAccountsToggle } from "./components/ClosedAccountsToggle";
+import { shareNativeFile } from "./lib/nativeFiles";
 
 type View = "dashboard" | "transactions" | "scheduled" | "add" | "settings";
 
@@ -40,15 +42,17 @@ export function App() {
   const [view, setView] = useState<View>("dashboard");
   const [query, setQuery] = useState("");
   const [accountFilter, setAccountFilter] = useState(0);
+  const [includeClosedTransactions, setIncludeClosedTransactions] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [replaceDriveOpen, setReplaceDriveOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const { accountByKey, payeeByKey, categoryLabelByKey, activeAccounts, transactions, balances, totals, operationSummary } =
-    useWalletSelectors(wallet, query, accountFilter);
+  const { accountByKey, payeeByKey, categoryLabelByKey, activeAccounts, transactionAccounts, transactionAccountFilter, transactions, balances, totals, operationSummary } =
+    useWalletSelectors(wallet, query, accountFilter, includeClosedTransactions);
   const disabled = busy || !hydrated;
 
   const resetNavigation = () => {
     setAccountFilter(0);
+    setIncludeClosedTransactions(false);
     setQuery("");
     setEditing(null);
     setView("dashboard");
@@ -68,11 +72,22 @@ export function App() {
     }
   };
 
-  const exportFile = () => {
-    const blob = new Blob([serializeHomeBankXml(wallet)], { type: "application/xml;charset=utf-8" });
+  const exportFile = async () => {
+    const xml = serializeHomeBankXml(wallet);
+    const basename = wallet.sourceFileName?.replace(/\.xhb$/i, "") || "homebank-web";
+    const filename = `${basename.replace(/[^a-zA-Z0-9._-]/g, "_")}-web.xhb`;
+    try {
+      if (import.meta.env.VITE_NATIVE_APP && await shareNativeFile(filename, xml)) {
+        controller.setMessage("Export .xhb partage.");
+        return;
+      }
+    } catch (error) {
+      controller.setMessage(error instanceof Error ? error.message : "Export natif impossible.");
+      return;
+    }
+    const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const basename = wallet.sourceFileName?.replace(/\.xhb$/i, "") || "homebank-web";
     link.href = url;
     link.download = `${basename}-web.xhb`;
     link.click();
@@ -221,16 +236,20 @@ export function App() {
               <div className="filters">
                 <TextField label="Rechercher" size="small" value={query} onChange={(event) => setQuery(event.target.value)}
                   slotProps={{ input: { startAdornment: <InputAdornment position="start"><Search size={18} /></InputAdornment> } }} />
-                <TextField select label="Compte" size="small" value={accountFilter} onChange={(event) => setAccountFilter(Number(event.target.value))}
+                <TextField select label="Compte" size="small" value={transactionAccountFilter} onChange={(event) => setAccountFilter(Number(event.target.value))}
                   slotProps={{ select: { native: true }, input: { startAdornment: <InputAdornment position="start"><ListFilter size={18} /></InputAdornment> } }}>
                     <option value={0}>Tous les comptes</option>
-                    {activeAccounts.map((account) => (
+                    {transactionAccounts.map((account) => (
                       <option key={account.key} value={account.key}>
-                        {account.name}
+                        {account.name}{isClosedAccount(account) ? " (clos)" : ""}
                       </option>
                     ))}
                 </TextField>
               </div>
+              {wallet.accounts.some(isClosedAccount) && <ClosedAccountsToggle checked={includeClosedTransactions} onChange={(checked) => {
+                setIncludeClosedTransactions(checked);
+                if (!checked && wallet.accounts.some((account) => account.key === accountFilter && isClosedAccount(account))) setAccountFilter(0);
+              }} />}
 
               <div className="transaction-list">
                 {transactions.map((txn) => (
@@ -242,6 +261,7 @@ export function App() {
                     categoryName={categoryLabelByKey.get(txn.categoryKey) ?? "Sans categorie"}
                     payeeName={payeeByKey.get(txn.payeeKey)?.name}
                     isFuture={txn.date > todayHbDate()}
+                    readOnly={Boolean(accountByKey.get(txn.accountKey) && isClosedAccount(accountByKey.get(txn.accountKey)!))}
                     onEdit={editTransaction}
                     onMark={markTransaction}
                   />
