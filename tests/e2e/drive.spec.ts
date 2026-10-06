@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { sampleXml } from "../fixtures";
+import { originalHomeBankXml as sampleXml } from "../fixtures";
 
 async function mockDrive(page: Page, requiresInteraction = false, missing = false) {
   const requests = { downloads: 0, uploads: [] as string[], checks: 0, missing };

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { sampleXml } from "../fixtures";
+import { originalHomeBankXml } from "../fixtures";
 import { todayHbDate } from "../../src/lib/wallet";
 import { readFileSync } from "node:fs";
 
@@ -21,6 +22,80 @@ test.beforeEach(async ({ page }) => {
     if (new URL(route.request().url()).hostname !== "127.0.0.1") return route.abort();
     return route.continue();
   });
+});
+
+test("imports and restores an original HomeBank double-precision version header", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Importer un fichier .xhb" })).toBeEnabled();
+  await page.locator('input[type="file"]').setInputFiles({ name: "original.xhb", mimeType: "application/xml", buffer: Buffer.from(originalHomeBankXml) });
+  await expect(page.getByRole("status")).toContainText("importe");
+  await expect(page.locator(".account-card").filter({ hasText: "Banque" })).toContainText("80,00");
+  await page.reload();
+  await expect(page.getByRole("status")).toContainText("local restaure");
+  await expect(page.locator(".account-card").filter({ hasText: "Banque" })).toContainText("80,00");
+});
+
+test("paginates large operation lists and resets the page when searching", async ({ page }) => {
+  await importWallet(page);
+  const many = sampleXml.replace(/<ope[^>]*\/>/g, "").replace("</homebank>",
+    Array.from({ length: 125 }, (_, index) => '<ope account="1" date="' + today + '" amount="-1" wording="Lot ' + index + '"/>').join("\n") + "</homebank>");
+  await page.locator('input[type="file"]').setInputFiles({ name: "many.xhb", mimeType: "application/xml", buffer: Buffer.from(many) });
+  await expect(page.getByRole("status")).toContainText("125 operations");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await expect(page.locator(".transaction-row")).toHaveCount(50);
+  await page.getByRole("button", { name: "Page suivante", exact: true }).click();
+  await expect(page.locator(".transaction-row").first()).toContainText("Lot 50");
+  await page.getByLabel("Rechercher", { exact: true }).fill("Lot 124");
+  await expect(page.locator(".transaction-row")).toHaveCount(1);
+  await expect(page.locator(".transaction-row")).toContainText("Lot 124");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("separates euro and dollar totals on accounts and operations", async ({ page }) => {
+  await importWallet(page);
+  const currencies = sampleXml.replace("</homebank>", '<cur key="2" iso="USD" frac="2"/></homebank>')
+    .replace('name="Epargne" type="7" curr="1"', 'name="Epargne" type="7" curr="2"');
+  await page.locator('input[type="file"]').setInputFiles({ name: "currencies.xhb", mimeType: "application/xml", buffer: Buffer.from(currencies) });
+  await expect(page.locator(".balance-primary .balance-value")).toHaveCount(2);
+  await expect(page.locator(".balance-primary .balance-value").first()).toContainText("80,00");
+  await expect(page.locator(".balance-primary .balance-value").nth(1)).toContainText("240,00");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await expect(page.locator(".balance-strip dd")).toHaveCount(6);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("asks for confirmation before clearing the local wallet", async ({ page }) => {
+  await importWallet(page);
+  await page.getByRole("button", { name: "Fichier", exact: true }).click();
+  await page.getByRole("button", { name: "Nouveau local", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Remplacer le portefeuille local ?" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Exporter .xhb", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Nouveau local", exact: true }).click();
+  await dialog.getByRole("button", { name: "Confirmer le remplacement", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Donnees locales effacees");
+});
+
+test("rejects stale writes from a second tab without overwriting the first tab", async ({ page }) => {
+  await importWallet(page);
+  const other = await page.context().newPage();
+  try {
+    await other.route("**/*", (route) => new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort());
+    await other.goto("/");
+    await expect(other.getByRole("status")).toContainText("local restaure");
+    for (const tab of [page, other]) await tab.getByRole("button", { name: "Operations", exact: true }).click();
+    const first = page.locator(".transaction-row").filter({ hasText: "Operation de test 13 " });
+    const stale = other.locator(".transaction-row").filter({ hasText: "Operation de test 13 " });
+    await first.getByRole("button", { name: "Pointer", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Operation pointee");
+    await stale.getByRole("button", { name: "Pointer", exact: true }).click();
+    await expect(other.getByRole("status")).toContainText("autre fenetre");
+    await other.reload();
+    await expect(other.getByRole("status")).toContainText("local restaure");
+    await other.getByRole("button", { name: "Operations", exact: true }).click();
+    await expect(stale.getByRole("button", { name: "Pointer", exact: true })).toHaveCount(0);
+  } finally { await other.close(); }
 });
 
 test("detects the system theme and follows changes until a manual choice", async ({ page }) => {

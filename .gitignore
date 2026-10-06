@@ -1,16 +1,45 @@
+# Dependencies and web outputs
 node_modules/
 dist/
 dist-native/
+coverage/
+*.tsbuildinfo
+
+# Generated packaging projects and native build caches
 .packaging/
 release/
 native/
+.build/
+.swiftpm/
+.gradle/
+native-plugins/**/build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# Private signing material (never commit keys or passwords)
+.signing/
+.homebank-key-*/
 *.p12
+*.pfx
 *.mobileprovision
 *.jks
 *.keystore
-.env.local
-.env.*.local
+*.key
+
+# Local configuration; templates remain versioned
+.env
+.env.*
+!.env.example
+!.env.*.example
 electron-drive.local.json
+mobile-drive.local.json
+
+# Test reports and local logs
 test-results/
 playwright-report/
+*.log
+
+# OS metadata
 .DS_Store
+Thumbs.db

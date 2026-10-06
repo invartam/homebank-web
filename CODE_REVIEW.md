@@ -1,5 +1,7 @@
 # Analyse et refactor du MVP
 
+Document historique du premier refactor. La revue transversale du 6 octobre 2026, ses corrections et les limites actuelles sont dans [CODE_AUDIT.md](CODE_AUDIT.md).
+
 Analyse du code React/TypeScript du MVP et comparaison des attributs XML avec `../src/hb-xml.c` du client HomeBank. Le client fourni utilise du C avec GTK/GLib.
 
 ## Constats et corrections

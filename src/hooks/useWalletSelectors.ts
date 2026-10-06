@@ -25,7 +25,7 @@ export function useWalletSelectors(wallet: Wallet, query: string, accountFilter:
       const transfer = type === "transfer" ? transferLabel(wallet, txn) : "";
       return !search || `${txn.memo} ${txn.number} ${payee} ${category} ${transactionTypeLabels[type]} ${transfer}`.toLocaleLowerCase("fr-FR").includes(search);
     }).sort((a, b) => b.date - a.date);
-  }, [wallet.transactions, transactionAccountKeys, transactionAccountFilter, query, payeeByKey, categoryLabelByKey]);
+  }, [wallet.transactions, wallet.accounts, transactionAccountKeys, transactionAccountFilter, query, payeeByKey, categoryLabelByKey]);
   const operationSummary = useMemo(() => {
     const accounts = transactionAccountFilter ? transactionAccounts.filter((account) => account.key === transactionAccountFilter) : transactionAccounts;
     return {

@@ -1,9 +1,11 @@
 import { ArrowDownToLine, ArrowRight, CalendarClock, ChevronRight, CircleCheck, FolderOpen, Landmark, Plus, Vault, WalletCards } from "lucide-react";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
-import { type Account, type AccountBalances, type Transaction, type Wallet, aggregateBalanceTone, balanceTone, formatAmount, formatHbDateFr, isBankAccount, isSavingsAccount } from "../lib/homebank";
+import { Fragment, useMemo } from "react";
+import { type Account, type AccountBalances, type Transaction, type Wallet, accountBalanceGroups, aggregateBalanceTone, balanceTone, formatAmount, formatHbDateFr, isBankAccount, isSavingsAccount } from "../lib/homebank";
 import { recentTransactions, transactionType, transferLabel } from "../lib/wallet";
 import { EmptyState } from "./common";
+import { useToday } from "../hooks/useToday";
 
 export function Dashboard({
   wallet,
@@ -36,34 +38,36 @@ export function Dashboard({
   onScheduled: () => void;
   onEdit: (transaction: Transaction) => void;
 }) {
-  const accountKeys = new Set(accounts.map((account) => account.key));
-  const { past: lastTransactions, future: nextTransactions } = recentTransactions(wallet.transactions, accountKeys);
+  const today = useToday();
+  const accountKeys = useMemo(() => new Set(accounts.map((account) => account.key)), [accounts]);
+  const { past: lastTransactions, future: nextTransactions } = useMemo(() => recentTransactions(wallet.transactions, accountKeys, today), [wallet.transactions, accountKeys, today]);
   const bankAccounts = accounts.filter(isBankAccount);
   const savingsAccounts = accounts.filter(isSavingsAccount);
-  const reconciledTone = aggregateBalanceTone(accounts, totalReconciledBalance);
-  const clearedTone = aggregateBalanceTone(accounts, totalClearedBalance);
-  const futureTone = aggregateBalanceTone(accounts, totalFutureBalance);
+  const groupedBalances = useMemo(() => accountBalanceGroups(wallet, accounts, balances), [wallet.accounts, wallet.currencies, wallet.baseCurrencyKey, accounts, balances]);
+  const groups = groupedBalances.length ? groupedBalances : [{ accounts, accountKey: 0, reconciled: totalReconciledBalance, cleared: totalClearedBalance, future: totalFutureBalance }];
 
   return (
     <section className="dashboard">
       <div className="balance-band">
+        {groups.map((group) => <Fragment key={group.accountKey}>
         <div className="balance-primary">
           <span className="balance-label"><CircleCheck size={18} />Solde rapproche total</span>
-          <strong className={`balance-value ${reconciledTone}`}>
-            {formatAmount(wallet, accounts[0]?.key ?? 0, totalReconciledBalance)}
+          <strong className={"balance-value " + aggregateBalanceTone(group.accounts, group.reconciled)}>
+            {formatAmount(wallet, group.accountKey, group.reconciled)}
           </strong>
-          <span className="balance-account-count"><WalletCards size={16} />{accounts.length} comptes actifs</span>
+          <span className="balance-account-count"><WalletCards size={16} />{group.accounts.length} comptes actifs</span>
         </div>
         <dl className="balance-pair">
           <div>
             <dt>Solde pointe</dt>
-            <dd className={`balance-value ${clearedTone}`}>{formatAmount(wallet, accounts[0]?.key ?? 0, totalClearedBalance)}</dd>
+            <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.cleared)}>{formatAmount(wallet, group.accountKey, group.cleared)}</dd>
           </div>
           <div>
             <dt>Solde futur</dt>
-            <dd className={`balance-value ${futureTone}`}>{formatAmount(wallet, accounts[0]?.key ?? 0, totalFutureBalance)}</dd>
+            <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.future)}>{formatAmount(wallet, group.accountKey, group.future)}</dd>
           </div>
         </dl>
+        </Fragment>)}
         <div className="quick-actions">
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={onAdd}>Ajouter</Button>
           <Button variant="outlined" startIcon={<FolderOpen size={18} />} onClick={onDriveOpen} disabled={!driveConfigured}>Drive</Button>

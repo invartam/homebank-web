@@ -6,7 +6,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { type Account, type Transaction, type TransactionType, type Wallet, hbDateToIso, isoToHbDate } from "../lib/homebank";
 import { paymodeLabels, transactionStructureLocked, transactionType, transactionTypeLabels, withTransactionType } from "../lib/wallet";
@@ -38,9 +38,9 @@ export function TransactionForm({
     transaction.payeeKey ? (wallet.payees.find((payee) => payee.key === transaction.payeeKey)?.name ?? "") : "",
   );
   const payeeListId = `payees-${transaction.id}`;
-  const categoryOptions = [...wallet.categories].sort((left, right) =>
+  const categoryOptions = useMemo(() => [...wallet.categories].sort((left, right) =>
     (categoryLabelByKey.get(left.key) ?? left.name).localeCompare(categoryLabelByKey.get(right.key) ?? right.name, "fr-FR"),
-  );
+  ), [wallet.categories, categoryLabelByKey]);
   const structuralDisabled = disabled || lockedStructure;
   const submit = (event: FormEvent) => {
     event.preventDefault();

@@ -1,8 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DriveApiError, DriveAuthorizationError, DriveFileUnavailableError, downloadDriveFile, driveAccessTokenExpiresAt, googleDriveConfigured, pickDriveHomeBankFile, requestDriveAccessToken, saveWalletToDrive, verifyDriveFile } from "../src/lib/googleDrive";
-import { sampleWallet } from "./fixtures";
+import { sampleWallet, sampleXml } from "./fixtures";
+import { downloadDriveWallet } from "../src/lib/googleDrive";
 
 describe("Google Drive adapter", () => {
+  it("imports the original GLib version spelling from the native desktop bridge", async () => {
+    vi.stubEnv("VITE_NATIVE_APP", true);
+    const version = (1.6).toPrecision(17);
+    window.homebankDrive = { configured: true, download: vi.fn(async () => ({
+      ok: true, value: sampleXml.replace('v="1.6"', 'v="' + version + '"'),
+    })) } as unknown as Window["homebankDrive"];
+    const wallet = await downloadDriveWallet({ id: "desktop-file", name: "original.xhb" }, "electron-drive-session");
+    expect(wallet.fileVersion).toBe(version);
+    expect(wallet.sourceFileName).toBe("original.xhb");
+    expect(wallet.accounts).toHaveLength(3);
+  });
+
+  it("keeps safe parse details and permanent-error semantics without copying bank contents", async () => {
+    for (const [xml, detail] of [
+      ['<homebank v="1.7"/>', "Version HomeBank non prise en charge"],
+      ['<homebank><ope st="99"/></homebank>', "Statut XML non pris en charge"],
+      ['<homebank><PRIVATE_ACCOUNT_NAME></homebank>', "Fichier XML invalide"],
+    ]) {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(xml)));
+      await expect(downloadDriveWallet({ id: "file", name: "test.xhb" }, "token"))
+        .rejects.toMatchObject({ status: 422, retryable: false, message: expect.stringContaining(detail) });
+      try { await downloadDriveWallet({ id: "file", name: "test.xhb" }, "token"); }
+      catch (error) { expect((error as Error).message).not.toContain("PRIVATE_ACCOUNT_NAME"); }
+    }
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 401 })));
+    await expect(downloadDriveWallet({ id: "file", name: "test.xhb" }, "token"))
+      .rejects.toMatchObject({ status: 401 });
+  });
+
   it("checks uncached metadata without downloading the wallet", async () => {
     const fetch = vi.fn(async () => new Response(JSON.stringify({ id: "file/1", trashed: false })));
     vi.stubGlobal("fetch", fetch);
@@ -121,7 +151,7 @@ describe("Google Drive adapter", () => {
   });
 
   it("bypasses cached downloads and writes XML with PATCH to the selected file", async () => {
-    const fetch = vi.fn(async () => ({ ok: true, text: async () => "<homebank/>" }));
+    const fetch = vi.fn(async () => new Response("<homebank/>"));
     vi.stubGlobal("fetch", fetch);
     expect(await downloadDriveFile("file/1", "token")).toBe("<homebank/>");
     expect(fetch).toHaveBeenNthCalledWith(1, "https://www.googleapis.com/drive/v3/files/file%2F1?alt=media", expect.objectContaining({ cache: "no-store", headers: { Authorization: "Bearer token" } }));

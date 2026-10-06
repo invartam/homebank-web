@@ -26,6 +26,40 @@ function harness(stored: WalletSession | undefined = session()) {
 }
 
 describe("wallet persistence and Drive ordering", () => {
+  it("rejects an existing-operation draft after Drive replaces or modifies its source", async () => {
+    const { controller, ports } = harness({ ...session(), driveFile: null });
+    await controller.initialize();
+    const original = controller.getSnapshot().wallet.transactions[0];
+    await controller.importWallet({ ...sampleWallet(), transactions: [] });
+    vi.mocked(ports.save).mockClear();
+    expect(await controller.commit({ ...original, memo: "Stale draft" }, "", original)).toBe(false);
+    expect(controller.getSnapshot().wallet.transactions).toHaveLength(0);
+    expect(ports.save).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().message).toContain("depuis l'ouverture");
+  });
+  it("requires confirmation to discard pending edits when importing or clearing local data", async () => {
+    const { controller, ports } = harness(session(true));
+    ports.driveConfigured = () => false;
+    await controller.initialize();
+    expect(await controller.reset()).toBe(false);
+    expect(await controller.importWallet(sampleWallet())).toBe(false);
+    expect(ports.save).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().pendingDriveSave).toBe(true);
+    expect(await controller.reset(true)).toBe(true);
+    expect(controller.getSnapshot().pendingDriveSave).toBe(false);
+  });
+
+  it("passes the latest local revision to every subsequent save", async () => {
+    const stored = { ...session(), driveFile: null, revision: 7 };
+    const { controller, ports } = harness(stored);
+    let revision = 7;
+    ports.save = vi.fn(async () => ++revision);
+    await controller.initialize();
+    await controller.commit({ ...newTransaction(1), amount: -1 }, "");
+    await controller.commit({ ...newTransaction(1), amount: -2 }, "");
+    expect(vi.mocked(ports.save).mock.calls.map(([session]) => session.revision)).toEqual([7, 8]);
+    expect(controller.getSnapshot().revision).toBe(9);
+  });
   it.each([false, true])("suspends missing-file restoration and preserves the cached session (pending=%s)", async (pending) => {
     const stored = session(pending);
     const { controller, ports, persisted } = harness(stored);

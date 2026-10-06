@@ -23,6 +23,9 @@ export const sampleXml = `<?xml version="1.0"?>
 
 export const sampleWallet = () => parseHomeBankXml(sampleXml, "test.xhb");
 
+// homebank_save_xml_ver formats FILE_VERSION with GLib's g_ascii_dtostr ("%.17g").
+export const originalHomeBankXml = sampleXml.replace('v="1.6"', 'v="' + (1.6).toPrecision(17) + '"');
+
 export const scheduledXml = sampleXml.replace("</homebank>", `
   <fav key="10" account="1" amount="2000" recflg="1" nextdate="${739891}" every="1" unit="2" wording="Salaire mensuel" info="SAL-42" custom="preserve"/>
   <fav key="11" account="1" amount="-600" recflg="1" nextdate="739894" every="1" unit="2" wording="Loyer" category="1"/>

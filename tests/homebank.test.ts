@@ -2,8 +2,52 @@ import { describe, expect, it } from "vitest";
 import { accountBalance, accountClearedBalance, accountReconciledBalance, balanceTone, balancesByAccount, formatHbDateFr, hbDateToIso, isoToHbDate, parseHomeBankXml, serializeHomeBankXml, sumAccountBalances, visibleAccounts } from "../src/lib/homebank";
 import { categoryPath, commitTransaction, newTransaction, recentTransactions, todayHbDate } from "../src/lib/wallet";
 import { sampleWallet, sampleXml } from "./fixtures";
+import { accountBalanceGroups } from "../src/lib/homebank";
 
 describe("HomeBank data", () => {
+  it("rejects malformed splits, unsafe XML constructs and unsupported statuses", () => {
+    for (const xml of [
+      '<homebank><ope scat="1" samt="NaN"/></homebank>',
+      '<homebank><ope scat="1" samt="2junk"/></homebank>',
+      '<homebank><ope scat="1||" samt="2||3"/></homebank>',
+      '<homebank><ope scat="1||2" samt="2" smem="a||b"/></homebank>',
+      '<homebank><ope scat="1" samt="2" smem="a||b"/></homebank>',
+      '<!DOCTYPE homebank><homebank/>',
+      '<homebank v="9.9"/>',
+      '<homebank v="1.7"/>',
+      '<homebank v="1.7000000000000000"/>',
+      '<homebank v="Infinity"/>',
+      '<homebank v="1.6junk"/>',
+      '<homebank><ope date="3652060"/></homebank>',
+      '<homebank><ope st="99"/></homebank>',
+      '<homebank><cur iso="not-a-currency" frac="99"/></homebank>',
+    ]) expect(() => parseHomeBankXml(xml)).toThrow();
+    expect(Number.isNaN(isoToHbDate("2026-02-31"))).toBe(true);
+    expect(Number.isNaN(isoToHbDate("2026-1-1"))).toBe(true);
+  });
+
+  it("reads HomeBank's double-precision file version and preserves its original spelling", () => {
+    const version = (1.6).toPrecision(17);
+    expect(version).toBe("1.6000000000000001");
+    const wallet = parseHomeBankXml(sampleXml.replace('v="1.6"', 'v="' + version + '"'));
+    expect(wallet.fileVersion).toBe(version);
+    expect(balancesByAccount(wallet).get(1)).toEqual({ reconciled: 80, cleared: 70, future: 65 });
+    const restored = parseHomeBankXml(serializeHomeBankXml(wallet));
+    expect(restored.fileVersion).toBe(version);
+    expect(restored.accounts).toEqual(wallet.accounts);
+    expect(restored.transactions.map(({ id: _id, ...transaction }) => transaction))
+      .toEqual(wallet.transactions.map(({ id: _id, ...transaction }) => transaction));
+    expect(parseHomeBankXml('<homebank v="1.10"/>').fileVersion).toBe("1.10");
+  });
+
+  it("keeps totals in separate currencies instead of adding euros and dollars", () => {
+    const wallet = sampleWallet();
+    wallet.currencies.push({ ...wallet.currencies[0], key: 2, iso: "USD" });
+    wallet.accounts[1] = { ...wallet.accounts[1], currencyKey: 2 };
+    const groups = accountBalanceGroups(wallet, visibleAccounts(wallet));
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.reconciled)).toEqual([80, 240]);
+  });
   it("keeps balances consistent with statuses, initial amounts and closed accounts", () => {
     const wallet = sampleWallet();
     const balances = balancesByAccount(wallet);
@@ -49,7 +93,7 @@ describe("HomeBank data", () => {
   });
 
   it("preserves tags even when their definitions follow operations", () => {
-    const wallet = parseHomeBankXml('<homebank><ope account="1" tags="apres"/><tag key="5" name="apres"/></homebank>');
+    const wallet = parseHomeBankXml('<homebank><ope date="739891" account="1" tags="apres"/><tag key="5" name="apres"/></homebank>');
     expect(wallet.transactions[0].tagKeys).toEqual([5]);
     expect(parseHomeBankXml(serializeHomeBankXml(wallet)).transactions[0].tagKeys).toEqual([5]);
   });

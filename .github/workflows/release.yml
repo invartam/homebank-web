@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - run: npm run audit:dependencies
       - run: npm run release:check
       - run: npm test
       - run: npm run build
@@ -47,8 +48,8 @@ jobs:
             arch: x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
@@ -64,7 +65,7 @@ jobs:
           ELECTRON_GOOGLE_CLIENT_ID: ${{ vars.ELECTRON_GOOGLE_CLIENT_ID }}
           ELECTRON_GOOGLE_CLIENT_SECRET: ${{ secrets.ELECTRON_GOOGLE_CLIENT_SECRET }}
       - run: npm run desktop:smoke
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-${{ matrix.target }}-${{ matrix.arch }}
           path: |
@@ -78,13 +79,16 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MOBILE_GOOGLE_ANDROID_CLIENT_ID: ${{ vars.MOBILE_GOOGLE_ANDROID_CLIENT_ID }}
+      MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID: ${{ vars.MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '21'
@@ -95,8 +99,16 @@ jobs:
           yes | sdkmanager --licenses > /dev/null
           set -o pipefail
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Signature debug stable pour Google (optionnelle)
+        if: github.ref_type != 'tag'
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          node -e "const fs = require('fs'), path = require('path'); if (process.env.ANDROID_DEBUG_KEYSTORE_BASE64) { const file = path.join(process.env.HOME, '.android/debug.keystore'); fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.from(process.env.ANDROID_DEBUG_KEYSTORE_BASE64, 'base64'), { mode: 0o600 }); }"
       - name: APK de test (execution manuelle)
         if: github.ref_type != 'tag'
+        env:
+          MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 && vars.MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID || '' }}
         run: npm run android:debug
       - name: APK et AAB signes (release)
         if: github.ref_type == 'tag'
@@ -111,8 +123,8 @@ jobs:
           npm run android:release
       - name: Supprimer la cle temporaire
         if: always()
-        run: rm -f "$RUNNER_TEMP/homebank-release.jks"
-      - uses: actions/upload-artifact@v4
+        run: rm -f "$RUNNER_TEMP/homebank-release.jks" "$HOME/.android/debug.keystore"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android
           path: |
@@ -125,9 +137,11 @@ jobs:
     needs: validate
     runs-on: macos-26
     timeout-minutes: 40
+    env:
+      MOBILE_GOOGLE_IOS_CLIENT_ID: ${{ vars.MOBILE_GOOGLE_IOS_CLIENT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
@@ -153,7 +167,7 @@ jobs:
       - name: Supprimer la signature temporaire
         if: always() && github.ref_type == 'tag'
         run: node scripts/ios-signing.mjs cleanup
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ios
           path: |
@@ -170,22 +184,22 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci --ignore-scripts
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: desktop-*
           path: release/desktop
           merge-multiple: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: android
           path: release/android
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ios
           path: release/ios

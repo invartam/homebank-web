@@ -1,0 +1,11 @@
+{
+  "name": "@homebank/capacitor-drive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Google Drive bridge for HomeBank Web",
+  "capacitor": {
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
+  },
+  "peerDependencies": { "@capacitor/core": "^8.0.0" }
+}

@@ -1,6 +1,7 @@
 const { readFile, writeFile, rename, rm } = require("node:fs/promises");
 const path = require("node:path");
 const { browserAuthorization, validFileId } = require("./oauth.cjs");
+const { readLimitedResponse } = require("./http.cjs");
 
 class AuthorizationError extends Error {
   constructor(message, requiresInteraction = true) { super(message); this.kind = "authorization"; this.requiresInteraction = requiresInteraction; }
@@ -41,12 +42,12 @@ function createDriveService({ config, userData, safeStorage, openExternal, fetch
   }
   async function exchange(parameters) {
     const response = await fetchImpl("https://oauth2.googleapis.com/token", {
-      method: "POST", signal: AbortSignal.timeout(30000),
+      method: "POST", redirect: "error", signal: AbortSignal.timeout(30000),
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ client_id: config.clientId,
         ...(config.clientSecret ? { client_secret: config.clientSecret } : {}), ...parameters }).toString(),
     });
-    const data = await response.json();
+    const data = JSON.parse(await readLimitedResponse(response, 256 * 1024));
     if (!response.ok) {
       if (data.error === "invalid_grant") {
         refreshToken = undefined; token = undefined;
@@ -94,7 +95,7 @@ function createDriveService({ config, userData, safeStorage, openExternal, fetch
     if (!validFileId(fileId)) throw new Error("Identifiant Drive invalide.");
     const current = await access();
     const response = await fetchImpl(`https://www.googleapis.com/${upload ? "upload/" : ""}drive/v3/files/${encodeURIComponent(fileId)}?${query}`, {
-      method: upload ? "PATCH" : "GET", cache: "no-store", signal: AbortSignal.timeout(30000),
+      method: upload ? "PATCH" : "GET", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(30000),
       headers: { Authorization: `Bearer ${current.value}`, ...(upload ? { "Content-Type": "application/x-homebank+xml" } : {}) },
       ...(upload ? { body } : {}),
     });
@@ -121,16 +122,16 @@ function createDriveService({ config, userData, safeStorage, openExternal, fetch
         value = { expiresAt: token.expiresAt };
       } else if (command === "pick") {
         const fileId = await interactive(true);
-        const metadata = await (await api(fileId, "fields=id,name,trashed")).json();
+        const metadata = JSON.parse(await readLimitedResponse(await api(fileId, "fields=id,name,trashed"), 256 * 1024));
         if (metadata.trashed || metadata.id !== fileId) throw new ApiError("Fichier Google Drive indisponible.", 404);
         if (typeof metadata.name !== "string") throw new Error("Nom du fichier Google Drive absent.");
         value = { file: { id: metadata.id, name: metadata.name }, expiresAt: token.expiresAt };
       } else if (command === "verify") {
-        const metadata = await (await api(payload, "fields=id,trashed")).json();
+        const metadata = JSON.parse(await readLimitedResponse(await api(payload, "fields=id,trashed"), 256 * 1024));
         if (metadata.trashed) throw new ApiError("Le fichier Google Drive est dans la corbeille.", 404);
         if (metadata.id !== payload) throw new Error("Reponse Google Drive invalide.");
       } else if (command === "download") {
-        value = await (await api(payload, "alt=media")).text();
+        value = await readLimitedResponse(await api(payload, "alt=media"));
       } else if (command === "save") {
         if (!payload || typeof payload.xml !== "string" || Buffer.byteLength(payload.xml) > 32 * 1024 * 1024) throw new Error("Fichier HomeBank invalide ou trop volumineux (32 Mo maximum).");
         await api(payload.fileId, "uploadType=media", { upload: true, body: payload.xml });

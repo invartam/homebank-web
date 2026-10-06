@@ -1,0 +1,19 @@
+buildscript {
+    repositories { google(); mavenCentral() }
+    dependencies { classpath 'com.android.tools.build:gradle:8.13.0' }
+}
+apply plugin: 'com.android.library'
+android {
+    namespace 'io.homebank.drive'
+    compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 36
+    defaultConfig { minSdkVersion 24 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+repositories { google(); mavenCentral() }
+dependencies {
+    implementation project(':capacitor-android')
+    implementation 'com.google.android.gms:play-services-auth:21.5.0'
+}

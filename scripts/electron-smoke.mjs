@@ -29,7 +29,7 @@ try {
     try { return (await navigator.serviceWorker.getRegistrations()).length; }
     catch (error) { if (error.name === "InvalidStateError") return 0; throw error; }
   })).toBe(0);
-  await page.locator('input[type="file"]').setInputFiles({ name: "demo.xhb", mimeType: "application/xml", buffer: Buffer.from(`<?xml version="1.0"?><homebank v="1.6" d="51003"><properties title="Demo" curr="1"/><cur key="1" iso="EUR" frac="2"/><account key="1" name="Compte de demonstration" type="1" curr="1" initial="100"/></homebank>`) });
+  await page.locator('input[type="file"]').setInputFiles({ name: "demo.xhb", mimeType: "application/xml", buffer: Buffer.from(`<?xml version="1.0"?><homebank v="1.6000000000000001" d="51003"><properties title="Demo" curr="1"/><cur key="1" iso="EUR" frac="2"/><account key="1" name="Compte de demonstration" type="1" curr="1" initial="100"/></homebank>`) });
   await expect(page.getByRole("button", { name: /Compte de demonstration/ })).toBeVisible();
   await page.getByRole("button", { name: "Fichier", exact: true }).click();
   if (driveConfigured) await expect(page.getByRole("button", { name: "Ouvrir Drive" })).toBeEnabled();

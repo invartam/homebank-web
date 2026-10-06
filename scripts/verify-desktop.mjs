@@ -4,7 +4,7 @@ import path from "node:path";
 import { root } from "./packaging-utils.mjs";
 
 export function allowedDesktopFile(file) {
-  if (/(^|\/)\.env(?:\.|$)/.test(file) || /\.(xhb|p12|pfx|jks|keystore|mobileprovision|pem|key)$/i.test(file)) return false;
+  if (/(^|\/)\.env(?:\.|$)/.test(file) || /\.local\.json$/i.test(file) || /\.(xhb|p12|pfx|jks|keystore|mobileprovision|pem|key)$/i.test(file)) return false;
   return file === "/package.json" || file === "/electron" || file.startsWith("/electron/") || file === "/dist-native" || file.startsWith("/dist-native/");
 }
 export function verifyDesktopPackages(directory = path.join(root, "release/desktop")) {

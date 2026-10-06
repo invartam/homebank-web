@@ -1,5 +1,8 @@
 import { type Account, type RawNode, type Tag, type Transaction, type TransactionSplit, type TransactionStatus, type Wallet, ACCOUNT_FLAGS, ACCOUNT_TYPES, emptyWallet } from "./models";
 export * from "./models";
+import { validateWalletSize } from "./fileLimits";
+
+export class HomeBankImportError extends Error {}
 
 const statusByValue: Record<number, TransactionStatus> = {
   0: "none",
@@ -19,7 +22,7 @@ const intAttr = (element: Element, name: string, fallback = 0) => {
   const value = element.getAttribute(name);
   if (value === null || value === "") return fallback;
   const parsed = Number(value);
-  if (!Number.isSafeInteger(parsed)) throw new Error(`Attribut ${name} invalide dans <${element.tagName}>.`);
+  if (!Number.isSafeInteger(parsed)) throw new HomeBankImportError(`Attribut ${name} invalide dans <${element.tagName}>.`);
   return parsed;
 };
 
@@ -27,7 +30,7 @@ const floatAttr = (element: Element, name: string, fallback = 0) => {
   const value = element.getAttribute(name);
   if (value === null || value === "") return fallback;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed)) throw new Error(`Attribut ${name} invalide dans <${element.tagName}>.`);
+  if (!Number.isFinite(parsed)) throw new HomeBankImportError(`Attribut ${name} invalide dans <${element.tagName}>.`);
   return parsed;
 };
 
@@ -53,31 +56,46 @@ const parseTagKeys = (value: string, tags: Tag[]) =>
     .filter((key) => key > 0);
 
 const parseSplits = (element: Element): TransactionSplit[] => {
-  const categories = textAttr(element, "scat")
-    .split("||")
-    .filter(Boolean);
-  const amounts = textAttr(element, "samt")
-    .split("||")
-    .filter(Boolean);
+  if (!textAttr(element, "scat") && !textAttr(element, "samt")) return [];
+  const categories = textAttr(element, "scat").split("||");
+  const amounts = textAttr(element, "samt").split("||");
   const memos = textAttr(element, "smem").split("||");
-
-  return categories.map((category, index) => ({
-    categoryKey: Number.parseInt(category, 10) || 0,
-    amount: Number.parseFloat(amounts[index] ?? "0") || 0,
-    memo: memos[index] ?? "",
-  }));
+  if (categories.length !== amounts.length || (element.hasAttribute("smem") && memos.length !== categories.length)) {
+    throw new HomeBankImportError("Ventilation XML incoherente.");
+  }
+  return categories.map((category, index) => {
+    const categoryKey = Number(category);
+    const amount = Number(amounts[index]);
+    if (!category.trim() || !Number.isSafeInteger(categoryKey) || categoryKey < 0
+      || !amounts[index].trim() || !Number.isFinite(amount)) throw new HomeBankImportError("Ventilation XML invalide.");
+    return { categoryKey, amount, memo: memos[index] ?? "" };
+  });
 };
 
 export const parseHomeBankXml = (xml: string, sourceFileName?: string): Wallet => {
+  validateWalletSize(xml.length);
+  validateWalletSize(new TextEncoder().encode(xml).byteLength);
+  if (/<!DOCTYPE/i.test(xml)) throw new HomeBankImportError("Les declarations DTD ne sont pas prises en charge dans les fichiers HomeBank.");
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   const error = doc.querySelector("parsererror");
   if (error) {
-    throw new Error(error.textContent || "Fichier XML invalide.");
+    throw new HomeBankImportError("Fichier XML invalide.");
   }
 
   const root = doc.documentElement;
   if (root.tagName !== "homebank") {
-    throw new Error("Le fichier ne contient pas de racine <homebank>.");
+    throw new HomeBankImportError("Le fichier ne contient pas de racine <homebank>.");
+  }
+  if (root.hasAttribute("v")) {
+    const rawVersion = (root.getAttribute("v") ?? "").trim();
+    const version = Number(rawVersion);
+    // hb-xml.c uses g_ascii_dtostr/g_ascii_strtod: v is a double, not a major.minor pair.
+    if (!/^\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(rawVersion) || !Number.isFinite(version) || version <= 0) {
+      throw new HomeBankImportError("Version du fichier HomeBank invalide.");
+    }
+    if (version > 1.6) {
+      throw new HomeBankImportError("Version HomeBank non prise en charge (format maximal : 1.6). Le fichier n'a pas ete modifie.");
+    }
   }
 
   const wallet = emptyWallet();
@@ -102,6 +120,8 @@ export const parseHomeBankXml = (xml: string, sourceFileName?: string): Wallet =
         wallet.earnByHour = floatAttr(child, "earnbyh");
         break;
       case "cur":
+        if ((textAttr(child, "iso") && !/^[A-Za-z]{3}$/.test(textAttr(child, "iso")))
+          || intAttr(child, "frac", 2) < 0 || intAttr(child, "frac", 2) > 20) throw new HomeBankImportError("Devise XML invalide.");
         wallet.currencies.push({
           key: intAttr(child, "key"),
           flags: intAttr(child, "flags"),
@@ -170,6 +190,8 @@ export const parseHomeBankXml = (xml: string, sourceFileName?: string): Wallet =
         wallet.templates.push({ name: "fav", attributes: attrs(child) });
         break;
       case "ope": {
+        if (child.hasAttribute("date") && (intAttr(child, "date") < 1 || intAttr(child, "date") > 3652059)) throw new HomeBankImportError("Date XML invalide.");
+        if (child.hasAttribute("st") && !Object.hasOwn(statusByValue, intAttr(child, "st"))) throw new HomeBankImportError("Statut XML non pris en charge.");
         const index = wallet.transactions.length + 1;
         wallet.transactions.push({
           id: `txn-${Date.now()}-${index}`,
@@ -339,16 +361,28 @@ export const hbDateToIso = (hbDate: number) => {
 
 export const formatHbDateFr = (hbDate: number, options: Intl.DateTimeFormatOptions = {}) => {
   const date = new Date(`${hbDateToIso(hbDate)}T00:00:00`);
-  return new Intl.DateTimeFormat("fr-FR", {
+  const settings: Intl.DateTimeFormatOptions = {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     ...options,
-  }).format(date);
+  };
+  const key = JSON.stringify(settings);
+  let formatter = dateFormats.get(key);
+  if (!formatter) {
+    if (dateFormats.size >= 32) dateFormats.clear();
+    formatter = new Intl.DateTimeFormat("fr-FR", settings);
+    dateFormats.set(key, formatter);
+  }
+  return formatter.format(date);
 };
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+const amountFormats = new Map<string, Intl.NumberFormat>();
 
 export const isoToHbDate = (iso: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return NaN;
   const date = new Date(`${iso}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== iso) return NaN;
   return Math.floor(date.getTime() / 86400000) + 719163;
 };
 
@@ -363,12 +397,20 @@ export const currencyForAccount = (wallet: Wallet, accountKey: number) => {
 
 export const formatAmount = (wallet: Wallet, accountKey: number, amount: number) => {
   const currency = currencyForAccount(wallet, accountKey);
-  return new Intl.NumberFormat("fr-FR", {
+  const settings: Intl.NumberFormatOptions = {
     style: "currency",
     currency: currency?.iso || "EUR",
     minimumFractionDigits: currency?.fractionDigits ?? 2,
     maximumFractionDigits: currency?.fractionDigits ?? 2,
-  }).format(amount);
+  };
+  const key = JSON.stringify(settings);
+  let formatter = amountFormats.get(key);
+  if (!formatter) {
+    if (amountFormats.size >= 32) amountFormats.clear();
+    formatter = new Intl.NumberFormat("fr-FR", settings);
+    amountFormats.set(key, formatter);
+  }
+  return formatter.format(amount);
 };
 
 export type BalanceTone = "positive" | "warning" | "danger";
@@ -444,6 +486,17 @@ export const sumAccountBalances = (accounts: Account[], balances: Map<number, Ac
     }
     return sum;
   }, { reconciled: 0, cleared: 0, future: 0 });
+
+export const accountBalanceGroups = (wallet: Wallet, accounts: Account[], balances = balancesByAccount(wallet)) => {
+  const groups = new Map<number, Account[]>();
+  for (const account of accounts) {
+    const key = currencyForAccount(wallet, account.key)?.key ?? wallet.baseCurrencyKey;
+    const group = groups.get(key) ?? [];
+    group.push(account);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({ accounts: group, accountKey: group[0].key, ...sumAccountBalances(group, balances) }));
+};
 
 export const isClosedAccount = (account: Account) => (account.flags & ACCOUNT_FLAGS.closed) !== 0;
 

@@ -4,11 +4,15 @@ import path from "node:path";
 import { checkVersion, metadata, nodeTool, packageInfo, requirePlatform, root } from "./packaging-utils.mjs";
 import { desktopIcon, mobileIcons } from "./icons.mjs";
 import { verifyDesktopPackages } from "./verify-desktop.mjs";
+import { configureMobileDrive } from "./mobile-drive-config.mjs";
+import { configureMobileSecurity } from "./mobile-security.mjs";
+import { verifyNativeAssets } from "./verify-native-assets.mjs";
 
 export function buildNativeWeb() {
   nodeTool("typescript/bin/tsc");
   nodeTool("vite/bin/vite.js", ["build", "--mode", "native"]);
   renameSync(path.join(root, "dist-native/native.html"), path.join(root, "dist-native/index.html"));
+  verifyNativeAssets(path.join(root, "dist-native"));
 }
 export function prepareDesktop() {
   desktopIcon();
@@ -18,7 +22,8 @@ export function prepareDesktop() {
   cpSync(path.join(root, "dist-native"), path.join(destination, "dist-native"), { recursive: true });
   cpSync(path.join(root, "electron"), path.join(destination, "electron"), { recursive: true });
   const localConfig = path.join(root, "electron-drive.local.json");
-  const drive = JSON.parse(readFileSync(existsSync(localConfig) ? localConfig : path.join(root, "electron/drive.config.json"), "utf8"));
+  const drive = process.env.ELECTRON_GOOGLE_CLIENT_ID !== undefined && process.env.ELECTRON_GOOGLE_CLIENT_SECRET !== undefined
+    ? {} : JSON.parse(readFileSync(existsSync(localConfig) ? localConfig : path.join(root, "electron/drive.config.json"), "utf8"));
   // Only native public-client credentials are packaged, never web .env files or user tokens.
   const config = { clientId: process.env.ELECTRON_GOOGLE_CLIENT_ID ?? drive.clientId ?? "",
     clientSecret: process.env.ELECTRON_GOOGLE_CLIENT_SECRET ?? drive.clientSecret ?? "" };
@@ -42,6 +47,8 @@ export function syncMobile(platform) {
     throw new Error(`Projet ${platform} existant ou APP_ID modifie : conserver vos modifications puis regenerer native/${platform}. Voir README_PACKAGING.md.`);
   }
   nodeTool("@capacitor/cli/bin/capacitor", ["sync", platform]);
+  configureMobileDrive(platform);
+  configureMobileSecurity(platform);
   mobileIcons(platform);
 }
 export function desktopPackage(target, arch = process.arch) {

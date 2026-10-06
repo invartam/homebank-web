@@ -20,7 +20,7 @@ import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { type Transaction, isClosedAccount, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
 import { googleDriveConfigured } from "./lib/googleDrive";
-import { newTransaction, todayHbDate } from "./lib/wallet";
+import { newTransaction } from "./lib/wallet";
 import { useWallet } from "./hooks/useWallet";
 import { useWalletSelectors } from "./hooks/useWalletSelectors";
 import { Dashboard } from "./components/Dashboard";
@@ -33,18 +33,24 @@ import { DriveIndicator, driveConnectionLabels } from "./components/DriveIndicat
 import ScheduledView from "./components/ScheduledView";
 import { ClosedAccountsToggle } from "./components/ClosedAccountsToggle";
 import { shareNativeFile } from "./lib/nativeFiles";
+import { validateWalletSize } from "./lib/fileLimits";
+import { TransactionList } from "./components/TransactionList";
+import { useToday } from "./hooks/useToday";
 
 type View = "dashboard" | "transactions" | "scheduled" | "add" | "settings";
 
 export function App() {
   const { mode, toggleTheme } = useAppearance();
+  const today = useToday();
   const { wallet, message, driveFile, driveSaving, driveConnection, driveError, busy, hydrated, pendingDriveSave, controller } = useWallet();
   const [view, setView] = useState<View>("dashboard");
   const [query, setQuery] = useState("");
   const [accountFilter, setAccountFilter] = useState(0);
   const [includeClosedTransactions, setIncludeClosedTransactions] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [editingOriginal, setEditingOriginal] = useState<Transaction | null>(null);
   const [replaceDriveOpen, setReplaceDriveOpen] = useState(false);
+  const [replacement, setReplacement] = useState<{ wallet?: ReturnType<typeof parseHomeBankXml> } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const { accountByKey, payeeByKey, categoryLabelByKey, activeAccounts, transactionAccounts, transactionAccountFilter, transactions, balances, totals, operationSummary } =
     useWalletSelectors(wallet, query, accountFilter, includeClosedTransactions);
@@ -55,6 +61,7 @@ export function App() {
     setIncludeClosedTransactions(false);
     setQuery("");
     setEditing(null);
+    setEditingOriginal(null);
     setView("dashboard");
   };
 
@@ -63,7 +70,9 @@ export function App() {
     const file = input.files?.[0];
     if (!file) return;
     try {
+      validateWalletSize(file.size);
       const parsed = parseHomeBankXml(await file.text(), file.name);
+      if (pendingDriveSave) { setReplacement({ wallet: parsed }); return; }
       if (await controller.importWallet(parsed)) resetNavigation();
     } catch (error) {
       controller.setMessage(error instanceof Error ? error.message : "Import impossible.");
@@ -89,7 +98,7 @@ export function App() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${basename}-web.xhb`;
+    link.download = filename;
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     controller.setMessage("Export .xhb genere.");
@@ -120,11 +129,13 @@ export function App() {
       return;
     }
     setEditing(newTransaction(accountKey));
+    setEditingOriginal(null);
     setView("add");
   };
 
   const editTransaction = (transaction: Transaction) => {
     setEditing(transaction);
+    setEditingOriginal(transaction);
     setView("add");
   };
 
@@ -133,16 +144,21 @@ export function App() {
   };
 
   const commit = async (transaction: Transaction, payee: string) => {
-    if (await controller.commit(transaction, payee)) {
+    if (await controller.commit(transaction, payee, editingOriginal)) {
       setEditing(null);
+      setEditingOriginal(null);
       setView("transactions");
     }
   };
 
-  const resetLocal = async () => {
-    if (await controller.reset()) {
+  const resetLocal = () => setReplacement({});
+  const confirmReplacement = async () => {
+    if (!replacement) return;
+    const imported = replacement.wallet;
+    if (await (imported ? controller.importWallet(imported, true) : controller.reset(true))) {
+      setReplacement(null);
       resetNavigation();
-      setView("settings");
+      if (!imported) setView("settings");
     }
   };
 
@@ -231,6 +247,7 @@ export function App() {
                 cleared={operationSummary.cleared}
                 future={operationSummary.future}
                 accounts={operationSummary.accounts}
+                balances={balances}
               />
 
               <div className="filters">
@@ -251,8 +268,8 @@ export function App() {
                 if (!checked && wallet.accounts.some((account) => account.key === accountFilter && isClosedAccount(account))) setAccountFilter(0);
               }} />}
 
-              <div className="transaction-list">
-                {transactions.map((txn) => (
+              <TransactionList transactions={transactions}>
+                {(txn) => (
                   <TransactionRow
                     key={txn.id}
                     txn={txn}
@@ -260,14 +277,14 @@ export function App() {
                     accountName={accountByKey.get(txn.accountKey)?.name ?? "Compte"}
                     categoryName={categoryLabelByKey.get(txn.categoryKey) ?? "Sans categorie"}
                     payeeName={payeeByKey.get(txn.payeeKey)?.name}
-                    isFuture={txn.date > todayHbDate()}
+                    isFuture={txn.date > today}
                     readOnly={Boolean(accountByKey.get(txn.accountKey) && isClosedAccount(accountByKey.get(txn.accountKey)!))}
                     onEdit={editTransaction}
                     onMark={markTransaction}
                   />
-                ))}
-                {transactions.length === 0 && <EmptyState onImport={() => fileInput.current?.click()} />}
-              </div>
+                )}
+              </TransactionList>
+              {transactions.length === 0 && <EmptyState onImport={() => fileInput.current?.click()} />}
             </section>
           )}
 
@@ -280,6 +297,7 @@ export function App() {
               transaction={editing}
               onCancel={() => {
                 setEditing(null);
+                setEditingOriginal(null);
                 setView("transactions");
               }}
               onSubmit={commit}
@@ -300,7 +318,7 @@ export function App() {
                 <Button variant="outlined" startIcon={<FolderOpen size={18} />} onClick={driveFile ? reconnectDrive : openDriveFile} disabled={!googleDriveConfigured() || driveConnection === "reconnecting" || driveConnection === "offline"}>
                   {driveConnection === "file-missing" ? "Choisir un autre fichier Drive" : driveFile ? "Reconnecter Drive" : "Ouvrir Drive"}
                 </Button>
-                <Button variant="outlined" startIcon={<Download size={18} />} onClick={exportFile} disabled={activeAccounts.length === 0}>Exporter .xhb</Button>
+                <Button variant="outlined" startIcon={<Download size={18} />} onClick={exportFile} disabled={wallet.accounts.length === 0}>Exporter .xhb</Button>
                 <Button color="error" startIcon={<FilePlus2 size={18} />} onClick={resetLocal}>Nouveau local</Button>
               </div>
               <dl className="metrics">
@@ -325,6 +343,19 @@ export function App() {
           )}
         </fieldset>
       </main>
+
+      <Dialog open={Boolean(replacement)} onClose={() => setReplacement(null)} aria-labelledby="replace-local-title" fullWidth maxWidth="sm">
+        <DialogTitle id="replace-local-title">Remplacer le portefeuille local ?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>La copie locale sera remplac&eacute;e. Le fichier sur Drive ne sera pas supprim&eacute;.</DialogContentText>
+          {pendingDriveSave && <Alert severity="warning" sx={{ mt: 2 }}>Des modifications ne sont pas synchronis&eacute;es. Exportez votre copie avant de continuer.</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
+          <Button startIcon={<Download size={18} />} onClick={exportFile}>Exporter la copie locale</Button>
+          <Button onClick={() => setReplacement(null)}>Annuler</Button>
+          <Button color="error" onClick={confirmReplacement} disabled={disabled}>Confirmer le remplacement</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={replaceDriveOpen} onClose={() => setReplaceDriveOpen(false)} aria-labelledby="replace-drive-title" fullWidth maxWidth="sm">
         <DialogTitle id="replace-drive-title" sx={{ fontSize: 20, lineHeight: 1.3 }}>Charger un autre fichier Drive ?</DialogTitle>

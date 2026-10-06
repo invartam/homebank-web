@@ -85,7 +85,7 @@ export const categoryPath = (category: Category, categoryByKey: Map<number, Cate
 };
 
 export const commitTransaction = (wallet: Wallet, transaction: Transaction, input: string): Wallet => {
-  if (!Number.isFinite(transaction.amount) || !Number.isInteger(transaction.date) || transaction.date < 1) {
+  if (!Number.isFinite(transaction.amount) || !Number.isSafeInteger(transaction.date) || transaction.date < 1 || transaction.date > 3652059) {
     throw new Error("Date ou montant invalide.");
   }
   const account = wallet.accounts.find((account) => account.key === transaction.accountKey);

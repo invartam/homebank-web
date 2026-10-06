@@ -1,6 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { parseHomeBankXml } from "../lib/homebank";
-import { downloadDriveFile, driveAccessTokenExpiresAt, googleDriveConfigured, pickDriveHomeBankFile, requestDriveAccessToken, saveWalletToDrive, verifyDriveFile } from "../lib/googleDrive";
+import { downloadDriveWallet, driveAccessTokenExpiresAt, googleDriveConfigured, pickDriveHomeBankFile, requestDriveAccessToken, saveWalletToDrive, verifyDriveFile } from "../lib/googleDrive";
 import { loadSession, saveSession } from "../lib/storage";
 import { WalletController } from "../lib/walletController";
 
@@ -13,7 +12,7 @@ export function useWallet() {
     tokenExpiresAt: driveAccessTokenExpiresAt,
     pick: pickDriveHomeBankFile,
     verify: verifyDriveFile,
-    download: async (file, token) => parseHomeBankXml(await downloadDriveFile(file.id, token), file.name),
+    download: downloadDriveWallet,
     upload: saveWalletToDrive,
   }));
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);

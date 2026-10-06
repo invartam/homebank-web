@@ -212,6 +212,7 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
 .closed-accounts-toggle.MuiFormControlLabel-root { display: flex; width: fit-content; max-width: 100%; min-height: 28px; margin: 0 0 8px; gap: 4px; }
 .closed-accounts-toggle .MuiFormControlLabel-label { font-size: 13px; line-height: 18px; color: var(--muted); }
 .transaction-list { display: grid; gap: 0; }
+.transaction-pagination { display: flex; justify-content: center; padding-top: 20px; }
 .transaction-row { min-width: 0; display: grid; gap: 4px; padding: 16px 12px; border-bottom: 1px solid var(--outline); background: var(--surface); }
 .transaction-row:first-child { border-top: 1px solid var(--outline); }
 .transaction-main.MuiButtonBase-root { display: grid; grid-template-columns: 90px minmax(0, 1fr) max-content 18px; align-items: center; gap: 12px; min-width: 0; padding: 4px 0; text-align: left; color: inherit; border-radius: 0; }

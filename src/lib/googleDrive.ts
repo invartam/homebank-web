@@ -1,5 +1,9 @@
-import { serializeHomeBankXml, type Wallet } from "./homebank";
+import { HomeBankImportError, parseHomeBankXml, serializeHomeBankXml, type Wallet } from "./homebank";
 import { electronDrive, type DesktopDriveResult } from "./electronDrive";
+import { mobileDrive } from "./mobileDrive";
+import { readWalletResponse, validateWalletSize } from "./fileLimits";
+
+const installedDrive = () => electronDrive() ?? (import.meta.env.VITE_NATIVE_APP ? mobileDrive() : undefined);
 
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const XHB_MIME_TYPE = "application/x-homebank+xml";
@@ -66,7 +70,7 @@ export interface DriveFileRef {
 }
 
 export const googleDriveConfigured = () =>
-  electronDrive()?.configured ?? (!import.meta.env.VITE_NATIVE_APP && Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_API_KEY));
+  installedDrive()?.configured ?? (!import.meta.env.VITE_NATIVE_APP && Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_API_KEY));
 
 const DESKTOP_SESSION = "electron-drive-session";
 async function desktopResult<T>(result: Promise<DesktopDriveResult<T>>): Promise<T> {
@@ -130,7 +134,7 @@ const waitForGoogleIdentity = () =>
 
 export const requestDriveAccessToken = (prompt: "" | "consent" | "none" = "") =>
   new Promise<string>((resolve, reject) => {
-    const desktop = electronDrive();
+    const desktop = installedDrive();
     if (desktop) {
       desktopResult(desktop.authorize(prompt)).then(({ expiresAt }) => resolve(rememberDesktopSession(expiresAt)), reject);
       return;
@@ -180,7 +184,7 @@ export const requestDriveAccessToken = (prompt: "" | "consent" | "none" = "") =>
   });
 
 export const pickDriveHomeBankFile = async (): Promise<{ file: DriveFileRef; accessToken: string }> => {
-  const desktop = electronDrive();
+  const desktop = installedDrive();
   if (desktop) {
     const result = await desktopResult(desktop.pick());
     return { file: result.file, accessToken: rememberDesktopSession(result.expiresAt) };
@@ -231,7 +235,7 @@ export const pickDriveHomeBankFile = async (): Promise<{ file: DriveFileRef; acc
 };
 
 export const verifyDriveFile = async (file: DriveFileRef, accessToken: string): Promise<void> => {
-  const desktop = electronDrive();
+  const desktop = installedDrive();
   if (desktop) return desktopResult(desktop.verify(file.id));
   const query = new URLSearchParams({ fields: "id,trashed" });
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?${query}`, {
@@ -246,7 +250,7 @@ export const verifyDriveFile = async (file: DriveFileRef, accessToken: string): 
 };
 
 export const downloadDriveFile = async (fileId: string, accessToken: string) => {
-  const desktop = electronDrive();
+  const desktop = installedDrive();
   if (desktop) return desktopResult(desktop.download(fileId));
   const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
     cache: "no-store",
@@ -260,12 +264,27 @@ export const downloadDriveFile = async (fileId: string, accessToken: string) => 
     throw await driveResponseError(response, "Impossible de lire le fichier Google Drive.");
   }
 
-  return response.text();
+  try { return await readWalletResponse(response); }
+  catch (error) {
+    if (error instanceof Error && error.message.includes("32 Mo")) throw new DriveApiError(error.message, 413, false);
+    throw error;
+  }
 };
 
+export async function downloadDriveWallet(file: DriveFileRef, accessToken: string): Promise<Wallet> {
+  const xml = await downloadDriveFile(file.id, accessToken);
+  try { return parseHomeBankXml(xml, file.name); }
+  catch (error) {
+    const detail = error instanceof HomeBankImportError ? " " + error.message : "";
+    throw new DriveApiError("Le fichier Drive n'est pas un fichier HomeBank valide ou pris en charge." + detail + " Copie locale conservee.", 422, false);
+  }
+}
+
 export const saveWalletToDrive = async (wallet: Wallet, file: DriveFileRef, accessToken: string) => {
-  const desktop = electronDrive();
-  if (desktop) return desktopResult(desktop.save(file.id, serializeHomeBankXml(wallet)));
+  const xml = serializeHomeBankXml(wallet);
+  validateWalletSize(new TextEncoder().encode(xml).byteLength);
+  const desktop = installedDrive();
+  if (desktop) return desktopResult(desktop.save(file.id, xml));
   const response = await fetch(
     `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(file.id)}?uploadType=media`,
     {
@@ -275,7 +294,7 @@ export const saveWalletToDrive = async (wallet: Wallet, file: DriveFileRef, acce
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": XHB_MIME_TYPE,
       },
-      body: serializeHomeBankXml(wallet),
+      body: xml,
     },
   );
 

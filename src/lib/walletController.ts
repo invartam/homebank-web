@@ -64,8 +64,8 @@ export class WalletController {
   }
 
   private session(): WalletSession {
-    const { wallet, driveFile, pendingDriveSave } = this.state;
-    return { wallet, driveFile, pendingDriveSave };
+    const { wallet, driveFile, pendingDriveSave, revision } = this.state;
+    return { wallet, driveFile, pendingDriveSave, revision };
   }
 
   private run(action: () => Promise<void | boolean>, background = false): Promise<boolean> {
@@ -116,8 +116,8 @@ export class WalletController {
   };
 
   private async replace(session: WalletSession) {
-    await this.ports.save(session);
-    this.publish(session);
+    const revision = await this.ports.save({ ...session, revision: this.state.revision });
+    this.publish({ ...session, ...(typeof revision === "number" ? { revision } : {}) });
   }
 
   private acceptToken(token: string) {
@@ -255,7 +255,8 @@ export class WalletController {
     }
   }
 
-  importWallet = (wallet: Wallet) => this.run(async () => {
+  importWallet = (wallet: Wallet, discardPending = false) => this.run(async () => {
+    if (this.state.pendingDriveSave && !discardPending) throw new Error("Exportez ou confirmez le remplacement des modifications locales non synchronisees.");
     await this.replace({ wallet, driveFile: null, pendingDriveSave: false });
     this.token = "";
     this.tokenExpiry = 0;
@@ -304,7 +305,13 @@ export class WalletController {
     await this.sync(message);
   }
 
-  commit = (transaction: Transaction, payee: string) => this.run(async () => {
+  commit = (transaction: Transaction, payee: string, original?: Transaction | null) => this.run(async () => {
+    if (original) {
+      const current = this.state.wallet.transactions.find((item) => item.id === original.id);
+      if (!current || JSON.stringify(current) !== JSON.stringify(original)) {
+        throw new Error("Cette operation a change depuis l'ouverture du formulaire. Reouvrez-la avant de modifier.");
+      }
+    }
     const wallet = commitTransaction(this.state.wallet, transaction, payee);
     await this.persistTransaction(wallet, "Operation enregistree localement.");
   });
@@ -314,7 +321,8 @@ export class WalletController {
     await this.persistTransaction(wallet, status === "reconciled" ? "Operation rapprochee." : "Operation pointee.");
   });
 
-  reset = () => this.run(async () => {
+  reset = (discardPending = false) => this.run(async () => {
+    if (this.state.pendingDriveSave && !discardPending) throw new Error("Exportez ou confirmez la suppression des modifications locales non synchronisees.");
     await this.replace({ wallet: emptyWallet(), driveFile: null, pendingDriveSave: false });
     this.token = "";
     this.tokenExpiry = 0;

@@ -8,7 +8,7 @@ function worker() {
   const listeners = new Map<string, (event: unknown) => void>();
   const cache = { match: vi.fn(async () => undefined as unknown), put: vi.fn(async () => undefined), addAll: vi.fn(async () => undefined) };
   const fetch = vi.fn(async () => ({ ok: true, type: "basic", clone: () => "fresh-copy" }));
-  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v20"]), delete: vi.fn(async () => true) };
+  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v20", "homebank-web-mvp-v21"]), delete: vi.fn(async () => true) };
   const self = { location: { origin: "https://local.test" }, addEventListener: (name: string, fn: (event: unknown) => void) => listeners.set(name, fn), clients: { claim: vi.fn(async () => undefined) } };
   runInNewContext(source, { URL, self, caches, fetch });
   return { cache, fetch, caches, self, listeners };
@@ -48,7 +48,27 @@ describe("PWA cache", () => {
     let completion: Promise<unknown> = Promise.resolve();
     listeners.get("activate")!({ waitUntil: (value: Promise<unknown>) => { completion = value; } });
     await completion;
-    expect(caches.delete).toHaveBeenCalledExactlyOnceWith("homebank-web-mvp-v9");
+    expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v9");
+    expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v20");
+    expect(caches.delete).toHaveBeenCalledTimes(2);
     expect(self.clients.claim).toHaveBeenCalledOnce();
+  });
+
+  it("returns network responses even when the cache is full", async () => {
+    const { listeners, cache } = worker();
+    cache.put.mockRejectedValueOnce(new Error("QuotaExceededError"));
+    let response: Promise<any> = Promise.resolve();
+    listeners.get("fetch")!({ request: { method: "GET", url: "https://local.test/", headers: { has: () => false }, mode: "navigate" },
+      respondWith: (value: Promise<any>) => { response = value; } });
+    expect((await response).ok).toBe(true);
+  });
+
+  it("never caches data-file navigations or arbitrary same-origin pages", () => {
+    const { listeners } = worker();
+    for (const name of ["bank.xhb", "bank.xml", "bank.csv", "private.json", "another-page"]) {
+      const respondWith = vi.fn();
+      listeners.get("fetch")!({ request: { method: "GET", url: "https://local.test/" + name, headers: { has: () => false }, mode: "navigate" }, respondWith });
+      expect(respondWith).not.toHaveBeenCalled();
+    }
   });
 });

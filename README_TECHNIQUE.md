@@ -4,6 +4,8 @@ Installation, compilation, deploiement et maintenance de la SPA HomeBank Web. La
 
 Pour les installateurs Electron macOS/Windows, les applications Capacitor iOS/Android, les signatures et les releases GitHub versionnees, consulter le [guide de packaging](README_PACKAGING.md).
 
+La revue des bibliotheques, de la securite, des bonnes pratiques et des optimisations, avec corrections et risques restants, est dans [CODE_AUDIT.md](CODE_AUDIT.md).
+
 ## Sommaire
 
 - [Installation et lancement](#installation-et-lancement)
@@ -33,7 +35,7 @@ npm run dev
 npm run dev -- --port 5173 --strictPort
 ```
 
-Le script ecoute sur toutes les interfaces reseau. Un smartphone sur le meme reseau peut utiliser l'adresse reseau affichee par Vite pour tester l'interface. L'HTTP sur une adresse IP locale ne remplace pas une origine HTTPS de production pour Drive et la PWA.
+Le serveur ecoute uniquement sur la machine locale par defaut. Pour un test smartphone sur un reseau de confiance, lancer explicitement `npm run dev -- --host 0.0.0.0` et utiliser l'adresse reseau affichee par Vite. Ne pas exposer le serveur de developpement sur Internet. L'HTTP sur une adresse IP locale ne remplace pas une origine HTTPS de production pour Drive et la PWA.
 
 Aucune variable d'environnement n'est necessaire pour l'import/export local. Sans configuration Google, les commandes Drive sont desactivees. Pour Drive, suivre le [guide Google Cloud](#guide-google-cloud-pas-a-pas) puis redemarrer Vite.
 
@@ -144,7 +146,7 @@ Cette premiere version est strictement en lecture seule : pas de creation, editi
 
 ## Google Drive
 
-Cette section de configuration OAuth/Picker concerne la version **web**. Pour **Electron**, utiliser un client Google de type Desktop et suivre [Google Drive dans Electron](README_PACKAGING.md#google-drive-dans-electron) : connexion dans le navigateur systeme, renouvellement automatique et jeton de renouvellement chiffre par le systeme. Les versions iOS/Android ne prennent pas encore Drive en charge.
+Cette section de configuration OAuth/Picker concerne la version **web**. Pour **Electron**, utiliser un client Google de type Desktop et suivre [Google Drive dans Electron](README_PACKAGING.md#google-drive-dans-electron). Pour les applications **iOS/Android**, suivre [Google Drive mobile](README_PACKAGING.md#google-drive-sur-ios-et-android) : clients mobiles distincts, session systeme/Trousseau iOS et autorisation native Google Play Services sur Android. Les jetons mobiles ne sont pas exposes au JavaScript.
 
 ### Connexion et reprise automatique
 
