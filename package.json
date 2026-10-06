@@ -43,7 +43,7 @@
     "@homebank/capacitor-drive": "file:native-plugins/homebank-drive",
     "@js-temporal/polyfill": "^0.5.1",
     "@mui/material": "^9.4.0",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^1.51.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
