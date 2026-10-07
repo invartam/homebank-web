@@ -36,7 +36,7 @@
     "@capacitor/android": "8.4.3",
     "@capacitor/core": "8.4.3",
     "@capacitor/filesystem": "8.1.3",
-    "@capacitor/ios": "8.4.3",
+    "@capacitor/ios": "8.5.2",
     "@capacitor/share": "8.0.2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
