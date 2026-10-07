@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
+    "build:e2e": "tsc && vite build --mode e2e",
     "test": "vitest run",
     "audit:dependencies": "npm audit --audit-level=moderate",
     "test:e2e": "playwright test",

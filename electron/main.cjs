@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, protocol, session, ipcMain, safeStorage, shell } = require("electron");
+const { app, BrowserWindow, Menu, protocol, session, ipcMain, safeStorage, shell, nativeTheme } = require("electron");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
 const { APP_ORIGIN, assetPath, trustedDriveSender } = require("./security.cjs");
@@ -10,13 +10,21 @@ const locked = app.requestSingleInstanceLock();
 if (!locked) app.quit();
 let window;
 let drive;
+const accessibilityPreferences = () => ({
+  reducedTransparency: nativeTheme.prefersReducedTransparency,
+  highContrast: nativeTheme.shouldUseHighContrastColors,
+});
 
 function createWindow() {
   window = new BrowserWindow({
     title: "HomeBank Web", width: 1280, height: 900, minWidth: 360, minHeight: 560,
     show: false, autoHideMenuBar: true,
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true,
-      preload: path.join(__dirname, "preload.cjs"), additionalArguments: configured(driveConfig) ? ["--homebank-drive-configured"] : [] },
+      preload: path.join(__dirname, "preload.cjs"), additionalArguments: [
+        ...(configured(driveConfig) ? ["--homebank-drive-configured"] : []),
+        ...(nativeTheme.prefersReducedTransparency ? ["--homebank-reduced-transparency"] : []),
+        ...(nativeTheme.shouldUseHighContrastColors ? ["--homebank-high-contrast"] : []),
+      ] },
   });
   window.once("ready-to-show", () => window.show());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -28,6 +36,13 @@ function createWindow() {
 }
 
 if (locked) app.whenReady().then(() => {
+  ipcMain.handle("homebank:appearance", (event) => {
+    if (!trustedDriveSender(event, window)) throw new Error("Acces a l'apparence refuse.");
+    return accessibilityPreferences();
+  });
+  nativeTheme.on("updated", () => {
+    if (window && !window.isDestroyed()) window.webContents.send("homebank:appearance-changed", accessibilityPreferences());
+  });
   drive = createDriveService({ config: driveConfig, userData: app.getPath("userData"), safeStorage,
     openExternal: (url) => shell.openExternal(url) });
   ipcMain.handle("homebank:drive", (event, command, payload) => {

@@ -258,6 +258,8 @@ Commiter aussi les scripts, workflows et modifications applicatives avant de tag
 
 `.github/workflows/release.yml` verifie les versions, lance les tests et compile le web, puis genere les packages sur les runners natifs. La publication ne commence qu'apres la reussite de **toutes** les cibles. La release inclut les fichiers et `SHA256SUMS`, avec des notes generees. Les permissions d'ecriture sont limitees au job de publication.
 
+Les deux workflows initialisent explicitement les outils Android avec [setup-android](https://github.com/android-actions/setup-android), fige sur un commit : outils en ligne de commande, licences, `ANDROID_HOME` et `PATH`, puis SDK 36 et Build Tools 36.0.0. Ils ne supposent pas que `sdkmanager` est deja accessible sur le runner. Les tests navigateur compilent un dossier isole `dist-e2e/` avec une configuration Google fictive ; ils ne necessitent aucun secret Google et cette configuration n'est pas utilisee par les packages distribues. Voir [les commandes de test](README_TECHNIQUE.md#tests).
+
 `v0.2.0-rc.1` produit une **prerelease**, un tag stable une release publique. Une release existante n'est pas ecrasee. `ci.yml` valide les pull requests et les branches `main`/`master` sans certificats.
 
 `BUILD_NUMBER` definit `versionCode` Android et `CFBundleVersion` iOS ; il provient de `github.run_number` dans la pipeline. La version commerciale reste `X.Y.Z`. Sans cette variable en local, le numero est calcule depuis SemVer. Pour distribuer plusieurs builds locaux ou prereleases, definir un compteur coherent et croissant ; ne pas melanger sans coordination compteurs locaux et CI. Les noms de fichiers et la version Android conservent le suffixe prerelease.

@@ -3,6 +3,13 @@ import { sampleXml } from "../fixtures";
 import { originalHomeBankXml } from "../fixtures";
 import { todayHbDate } from "../../src/lib/wallet";
 import { readFileSync } from "node:fs";
+import { bankTokens } from "../../src/theme";
+import type { DesignSystem } from "../../src/lib/platform";
+
+const rgb = (hex: string) => "rgb(" + [1, 3, 5].map((offset) => parseInt(hex.slice(offset, offset + 2), 16)).join(", ") + ")";
+async function tokensFor(page: Page, mode: "light" | "dark") {
+  return bankTokens(mode, await page.locator("html").getAttribute("data-design") as DesignSystem);
+}
 
 const today = todayHbDate();
 const xml = sampleXml.replace(/<ope[^>]*\/>/g, "").replace("</homebank>", [
@@ -104,7 +111,7 @@ test("detects the system theme and follows changes until a manual choice", async
   const toggle = page.getByRole("switch", { name: "Theme sombre" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(toggle).toBeChecked();
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#202326");
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", (await tokensFor(page, "dark")).surface);
   await page.emulateMedia({ colorScheme: "light" });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(toggle).not.toBeChecked();
@@ -120,7 +127,7 @@ test("switches themes, remembers the choice and renders dark views without overf
   await expect(toggle).not.toBeChecked();
   await toggle.check();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.locator(".account-card").first()).toHaveCSS("background-color", "rgb(32, 35, 38)");
+  await expect(page.locator(".account-card").first()).toHaveCSS("background-color", rgb((await tokensFor(page, "dark")).surface));
   await expect(page.locator(".balance-value.positive").first()).toHaveCSS("color", "rgb(124, 215, 167)");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath("dark-dashboard.png"), fullPage: true, animations: "disabled" });
@@ -128,12 +135,12 @@ test("switches themes, remembers the choice and renders dark views without overf
   await expect(toggle).toBeChecked();
   await page.getByRole("button", { name: "Ajouter", exact: true }).click();
   await expect(page.getByLabel("Tiers", { exact: true })).toBeVisible();
-  await expect(page.locator(".form-grid .MuiInputBase-root").first()).toHaveCSS("background-color", "rgb(32, 35, 38)");
+  await expect(page.locator(".form-grid .MuiInputBase-root").first()).toHaveCSS("background-color", rgb((await tokensFor(page, "dark")).surface));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath("dark-form.png"), fullPage: true, animations: "disabled" });
   await page.getByRole("button", { name: "Operations", exact: true }).click();
-  await expect(page.locator(".transaction-row.future").first()).toHaveCSS("background-color", "rgb(40, 44, 48)");
+  await expect(page.locator(".transaction-row.future").first()).toHaveCSS("background-color", rgb((await tokensFor(page, "dark")).futureSurface));
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: testInfo.outputPath("dark-transactions.png"), fullPage: true, animations: "disabled" });
   await toggle.uncheck();

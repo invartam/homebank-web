@@ -2,7 +2,7 @@
   color-scheme: light;
   color: var(--text);
   background: var(--canvas);
-  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--ui-font, Roboto), "Helvetica Neue", Arial, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --surface: #fff;
@@ -175,7 +175,7 @@ main { margin-left: var(--navigation-width); padding: 32px 40px 0; }
 .account-type-icon { display: grid; width: 40px; height: 40px; place-items: center; color: var(--primary); background: var(--primary-container); border-radius: 8px; }
 .savings .account-type-icon { color: var(--secondary); background: var(--secondary-container); }
 .account-identity { display: grid; gap: 4px; min-width: 0; }
-.account-identity > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; }
+.account-identity > span { overflow-wrap: anywhere; font-size: 15px; font-weight: 500; }
 .account-identity small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
 .account-chevron { color: var(--subtle-icon); }
 .account-balance-label { grid-column: 1 / -1; margin-top: 12px; color: var(--muted); font-size: 12px; }

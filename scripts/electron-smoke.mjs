@@ -17,6 +17,13 @@ try {
   expect(realpathSync(await application.evaluate(({ app }) => app.getPath("userData")))).toBe(profile);
   const page = await application.firstWindow();
   await expect(page.getByRole("heading", { name: "Mes comptes" })).toBeVisible();
+  const expectedDesign = process.platform === "darwin" ? "apple" : process.platform === "win32" ? "fluent" : "material";
+  await expect(page.locator("html")).toHaveAttribute("data-design", expectedDesign);
+  await expect(page.locator("html")).toHaveAttribute("data-runtime", "electron");
+  expect(await page.evaluate(() => window.homebankPlatform.platform)).toBe(process.platform);
+  const preferences = await page.evaluate(() => window.homebankPlatform.getAccessibility());
+  expect(typeof preferences.reducedTransparency).toBe("boolean");
+  expect(typeof preferences.highContrast).toBe("boolean");
   await expect(page.getByRole("button", { name: "Importer un fichier .xhb" })).toBeEnabled();
   expect(await page.evaluate(() => typeof globalThis.process)).toBe("undefined");
   expect(await page.evaluate(() => typeof window.homebankDrive?.authorize)).toBe("function");

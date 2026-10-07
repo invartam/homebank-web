@@ -1,0 +1,130 @@
+/* Data stays opaque; platform materials belong to the navigation/command layer. */
+.topbar { min-height: 76px; }
+.topbar h1 { font-size: 22px; }
+.balance-primary strong { font-size: 34px; }
+.account-card strong { font-size: 26px; }
+.transaction-actions .MuiButton-root { min-height: 44px; }
+.transaction-main.MuiButtonBase-root { min-height: 44px; }
+.transaction-row { padding-block: 12px; }
+.transaction-row.future { border-left: 2px solid var(--input-outline); }
+.appearance-settings { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--outline); }
+.appearance-settings h3 { margin: 0 0 12px; font-size: 16px; font-weight: 500; }
+.appearance-settings .MuiFormControlLabel-root { margin-left: 0; max-width: 100%; }
+.account-overdraft { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+
+:root[data-design="apple"] .topbar,
+:root[data-design="apple"] .bottom-nav,
+:root[data-design="fluent"] .topbar,
+:root[data-design="fluent"] .bottom-nav { background: var(--surface); }
+
+:root[data-design="apple"] .topbar { border-bottom-color: color-mix(in srgb, var(--outline) 70%, transparent); }
+:root[data-design="apple"] .topbar h1 { font-weight: 600; }
+:root[data-design="apple"] .bottom-nav { padding-inline: 14px; }
+:root[data-design="apple"] .navigation-caption { text-transform: none; font-size: 12px; }
+:root[data-design="apple"] .nav-button.MuiButtonBase-root { border-radius: 12px; }
+:root[data-design="apple"] .nav-button.active.MuiButtonBase-root {
+  color: var(--text); background: var(--surface); font-weight: 600;
+  box-shadow: 0 1px 5px var(--shadow), inset 0 0 0 1px var(--outline);
+}
+:root[data-design="apple"] .nav-button.active .nav-icon { color: var(--primary); }
+:root[data-design="apple"] .balance-value { font-weight: 600; }
+:root[data-design="apple"] .operation-type.MuiToggleButtonGroup-root,
+:root[data-design="apple"] .calendar-mode.MuiToggleButtonGroup-root {
+  background: var(--subtle-surface); padding: 4px; border-radius: 12px; gap: 4px;
+}
+:root[data-design="apple"] .operation-type .MuiToggleButton-root,
+:root[data-design="apple"] .calendar-mode .MuiToggleButton-root { border: 0; border-radius: 8px; }
+:root[data-design="apple"] .operation-type .MuiToggleButton-root.Mui-selected,
+:root[data-design="apple"] .calendar-mode .MuiToggleButton-root.Mui-selected {
+  background: var(--surface); color: var(--text); box-shadow: 0 1px 4px var(--shadow); font-weight: 600;
+}
+:root[data-design="apple"] .account-card.MuiButtonBase-root { box-shadow: 0 1px 2px var(--shadow); }
+:root[data-design="apple"] .fab.MuiFab-root { border-radius: 24px; }
+
+:root[data-design="fluent"] .topbar { border-bottom-width: 1px; }
+:root[data-design="fluent"] .topbar h1 { font-weight: 600; }
+:root[data-design="fluent"] .nav-button.MuiButtonBase-root { border-radius: 4px; position: relative; }
+:root[data-design="fluent"] .nav-button.active.MuiButtonBase-root { color: var(--text); background: var(--primary-container); font-weight: 600; }
+:root[data-design="fluent"] .nav-button.active::before {
+  content: ""; position: absolute; left: 0; top: 13px; bottom: 13px; width: 3px; border-radius: 2px; background: var(--primary);
+}
+:root[data-design="fluent"] .fab.MuiFab-root { border-radius: 4px; }
+:root[data-design="fluent"] .account-card.MuiButtonBase-root { border-radius: 4px; box-shadow: 0 1px 2px var(--shadow); }
+:root[data-design="fluent"] .account-type-icon { border-radius: 4px; }
+:root[data-design="fluent"] .transaction-row { padding-inline: 16px; }
+:root[data-design="fluent"] .transaction-row:hover { background: var(--hover); }
+:root[data-design="fluent"] .transaction-row.future:hover { background: var(--future-surface); }
+:root[data-design="fluent"] .MuiOutlinedInput-notchedOutline { border-bottom-color: var(--text); }
+
+/* Compact filter captions avoid pushing the calendar below the first viewport. */
+:root:not([data-design="material"]) .schedule-filters .MuiInputLabel-root.MuiInputLabel-shrink {
+  position: absolute; transform: translate(14px, -9px) scale(0.75); transform-origin: top left;
+  margin: 0; max-width: calc(100% - 28px); font-size: 16px; line-height: 24px;
+  background: var(--surface); padding-inline: 4px;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-design="apple"][data-reduced-transparency="false"] .topbar,
+  :root[data-design="apple"][data-reduced-transparency="false"] .bottom-nav {
+    background: var(--chrome-surface); -webkit-backdrop-filter: blur(20px) saturate(1.25); backdrop-filter: blur(20px) saturate(1.25);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--surface) 85%, transparent);
+  }
+  :root[data-design="fluent"][data-reduced-transparency="false"] .topbar,
+  :root[data-design="fluent"][data-reduced-transparency="false"] .bottom-nav {
+    background: var(--chrome-surface); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  }
+}
+
+@media (max-width: 800px) {
+  .topbar { padding-top: max(14px, env(safe-area-inset-top)); }
+  .account-card strong { font-size: 26px; }
+  .operation-type .MuiToggleButton-root { flex-wrap: wrap; }
+  :root[data-design="apple"] .bottom-nav {
+    left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom)); padding: 6px; border: 1px solid var(--outline);
+    border-radius: 28px; gap: 0; box-shadow: 0 5px 20px var(--shadow);
+  }
+  :root[data-design="apple"] .nav-button.MuiButtonBase-root { min-height: 64px; border-radius: 22px; gap: 4px; font-size: 10px; }
+  :root[data-design="apple"] .nav-icon { width: 40px; height: 28px; background: transparent; }
+  :root[data-design="apple"] .nav-button.active.MuiButtonBase-root { background: var(--surface); box-shadow: inset 0 0 0 1px var(--outline); }
+  :root[data-design="apple"] .fab.MuiFab-root { width: 48px; height: 48px; min-height: 48px; border-radius: 50%; }
+  :root[data-design="apple"] .fab-slot { width: 48px; height: 48px; }
+  :root[data-design="fluent"] .nav-button.active::before { left: 25%; right: 25%; top: 0; bottom: auto; width: auto; height: 3px; }
+  :root[data-design="fluent"] .nav-button.MuiButtonBase-root { border-radius: 4px; }
+  :root[data-design="fluent"] .nav-icon { background: transparent; }
+  :root[data-design="fluent"] .nav-button.active .nav-icon { background: var(--primary-container); border-radius: 4px; }
+}
+
+@media (max-width: 800px), (pointer: coarse) {
+  .app-shell .MuiButton-root, .MuiDialog-root .MuiButton-root,
+  .app-shell .MuiToggleButton-root { min-height: 48px; }
+  .app-shell .MuiIconButton-root, .MuiDialog-root .MuiIconButton-root { min-width: 48px; min-height: 48px; }
+  .transaction-actions .MuiButton-root { min-height: 48px; }
+  .MuiInputBase-root input, .MuiInputBase-root select, .MuiInputBase-root textarea { font-size: 16px !important; }
+}
+
+:root[data-reduced-transparency="true"] .topbar,
+:root[data-reduced-transparency="true"] .bottom-nav {
+  background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none;
+}
+:root[data-high-contrast="true"] .nav-button.active { outline: 2px solid var(--primary); outline-offset: -2px; }
+:root[data-high-contrast="true"] .account-card,
+:root[data-high-contrast="true"] .transaction-row { border-color: var(--text); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .topbar, .bottom-nav { background: var(--surface) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+@media (forced-colors: active) {
+  .topbar, .bottom-nav, .account-card, .transaction-row, .calendar-month-grid, .calendar-year-grid {
+    background: Canvas !important; color: CanvasText; border-color: CanvasText;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important; box-shadow: none !important;
+  }
+  .balance-value, .amount, .date-pill, .transaction-status { color: CanvasText !important; }
+  .nav-button.active.MuiButtonBase-root { outline: 2px solid Highlight; outline-offset: -2px; }
+}
+@media print {
+  .topbar, .bottom-nav, .quick-actions, .transaction-actions, .status-line { display: none; }
+  main { margin: 0; padding: 0; }
+  .app-shell { padding: 0; background: white; }
+  .account-card, .transaction-row { break-inside: avoid; }
+}

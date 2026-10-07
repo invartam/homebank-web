@@ -6,6 +6,7 @@ import "@fontsource/roboto/latin-400.css";
 import "@fontsource/roboto/latin-500.css";
 import "@fontsource/roboto/latin-700.css";
 import "./styles.css";
+import "./platforms.css";
 import { initializeMobileDrive } from "./lib/mobileDrive";
 
 function render() {

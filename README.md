@@ -1,5 +1,7 @@
 # HomeBank Web
 
+L'interface suit votre appareil : **Material** sur Android/ChromeOS et par defaut, **Apple Liquid Glass adapte** sur iOS/macOS, **Fluent adapte** sur Windows. Clair et sombre sont disponibles dans les trois variantes. [Voir les variantes et la revue du design](DESIGN_REVIEW.md).
+
 **Votre HomeBank, partout avec vous.**
 
 Consultez vos comptes, saisissez une dépense depuis votre smartphone et anticipez vos prochaines échéances. HomeBank Web prolonge votre gestion HomeBank dans une interface bancaire claire, adaptée à l'ordinateur comme au mobile, tout en conservant votre fichier `.xhb`.

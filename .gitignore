@@ -1,6 +1,7 @@
 # Dependencies and web outputs
 node_modules/
 dist/
+dist-e2e/
 dist-native/
 coverage/
 *.tsbuildinfo

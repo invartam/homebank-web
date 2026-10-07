@@ -1,14 +1,16 @@
-import { Upload } from "lucide-react";
+import { FolderOpen, SearchX, Upload } from "lucide-react";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import type { ReactNode } from "react";
 
-export function EmptyState({ onImport }: { onImport: () => void }) {
+export function EmptyState({ onImport, hasWallet = false, message = "Aucune operation pour les comptes affiches." }: {
+  onImport: () => void; hasWallet?: boolean; message?: string;
+}) {
   return (
     <div className="empty-state">
-      <Upload size={24} />
-      <p>Importe un fichier HomeBank .xhb pour commencer.</p>
-      <Button variant="contained" startIcon={<Upload size={18} />} onClick={onImport}>Importer</Button>
+      {hasWallet ? <SearchX size={24} aria-hidden="true" /> : <FolderOpen size={24} aria-hidden="true" />}
+      <p>{hasWallet ? message : "Aucun fichier ouvert."}</p>
+      {!hasWallet && <Button variant="contained" startIcon={<Upload size={18} />} onClick={onImport}>Importer</Button>}
     </div>
   );
 }

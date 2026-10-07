@@ -16,6 +16,7 @@ import LinearProgress from "@mui/material/LinearProgress";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { type Transaction, isClosedAccount, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
@@ -40,7 +41,7 @@ import { useToday } from "./hooks/useToday";
 type View = "dashboard" | "transactions" | "scheduled" | "add" | "settings";
 
 export function App() {
-  const { mode, toggleTheme } = useAppearance();
+  const { mode, toggleTheme, reducedTransparency, systemTransparency, toggleTransparency } = useAppearance();
   const today = useToday();
   const { wallet, message, driveFile, driveSaving, driveConnection, driveError, busy, hydrated, pendingDriveSave, controller } = useWallet();
   const [view, setView] = useState<View>("dashboard");
@@ -284,7 +285,7 @@ export function App() {
                   />
                 )}
               </TransactionList>
-              {transactions.length === 0 && <EmptyState onImport={() => fileInput.current?.click()} />}
+              {transactions.length === 0 && <EmptyState onImport={() => fileInput.current?.click()} hasWallet={wallet.accounts.length > 0} message="Aucune operation pour ces filtres." />}
             </section>
           )}
 
@@ -339,6 +340,16 @@ export function App() {
                   <dd>{wallet.fileVersion}</dd>
                 </div>
               </dl>
+              <section className="appearance-settings" aria-labelledby="appearance-settings-title">
+                <h3 id="appearance-settings-title">Accessibilit&eacute;</h3>
+                <Tooltip title={systemTransparency ? "Transparence reduite par les preferences du systeme" : "Reduire la transparence"}>
+                  <span>
+                    <FormControlLabel label="Reduire la transparence"
+                      control={<Switch checked={reducedTransparency} onChange={toggleTransparency} disabled={systemTransparency}
+                        slotProps={{ input: { role: "switch", "aria-label": "Reduire la transparence" } }} />} />
+                  </span>
+                </Tooltip>
+              </section>
             </section>
           )}
         </fieldset>

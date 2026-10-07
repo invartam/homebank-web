@@ -1,5 +1,7 @@
 # HomeBank Web : Guide Technique
 
+L'apparence s'adapte automatiquement a l'OS : Material par defaut/Android/ChromeOS, Apple sur macOS/iOS et Fluent sur Windows. La [revue du design](DESIGN_REVIEW.md) decrit les variantes, la detection et l'accessibilite.
+
 Installation, compilation, deploiement et maintenance de la SPA HomeBank Web. La presentation du logiciel et ses captures d'ecran sont dans le [README principal](README.md).
 
 Pour les installateurs Electron macOS/Windows, les applications Capacitor iOS/Android, les signatures et les releases GitHub versionnees, consulter le [guide de packaging](README_PACKAGING.md).
@@ -262,24 +264,17 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Les tests unitaires couvrent les soldes, les types d'operations, les liens de virements et leur export XML, les dates locales, la persistance IndexedDB, les erreurs OAuth, l'expiration des jetons, les reprises Drive et le cache PWA. Les tests Playwright couvrent l'import, les comptes actifs, les dates sans chevauchement, les themes, la creation des trois types, l'edition d'un virement depuis le compte credite, le pointage, le rapprochement, l'export/reimport, la restauration apres refresh, l'indicateur hors ligne et la reconnexion sans perte du brouillon, aux formats desktop et mobile. Ils utilisent des donnees fictives et des reponses Drive/OAuth simulees ; ils ne se connectent pas a un compte Google. Les parcours Drive necessitent une configuration Google non vide dans le build (des valeurs fictives suffisent pour ces tests).
+Les tests unitaires couvrent les soldes, les types d'operations, les liens de virements et leur export XML, les dates locales, la persistance IndexedDB, les erreurs OAuth, l'expiration des jetons, les reprises Drive et le cache PWA. Les tests Playwright couvrent l'import, les comptes actifs, les dates sans chevauchement, les themes, la creation des trois types, l'edition d'un virement depuis le compte credite, le pointage, le rapprochement, l'export/reimport, la restauration apres refresh, l'indicateur hors ligne et la reconnexion sans perte du brouillon, aux formats desktop et mobile. Ils utilisent des donnees fictives et des reponses Drive/OAuth simulees ; ils ne se connectent pas a un compte Google. Playwright lance Vite en mode `e2e`, avec des identifiants Google fictifs fixes et sans charger les fichiers `.env*` ni les variables `VITE_*` du processus. Aucun identifiant Google reel n'est necessaire, en local ou en CI.
 
 Les tests couvrent aussi les projections de planifications, les reports du week-end, les limites d'occurrences, les filtres, les totaux de l'onglet actif et la conservation des noeuds XML apres consultation.
 
-Pour les parcours Drive en developpement sans configurer de vrai compte :
+Les parcours sont aussi verifies sur un petit ecran de 320 pixels. Pour les executer sur une compilation optimisee comme en CI :
 
 ```bash
-VITE_GOOGLE_CLIENT_ID=123456789-test.apps.googleusercontent.com VITE_GOOGLE_API_KEY=test-key npm run test:e2e
-```
-
-Les parcours sont aussi verifies sur un petit ecran de 320 pixels. Pour les executer sur le build de production :
-
-```bash
-VITE_GOOGLE_CLIENT_ID=123456789-test.apps.googleusercontent.com VITE_GOOGLE_API_KEY=test-key npm run build
 E2E_PREVIEW=1 npm run test:e2e
 ```
 
-Le port local `4174` doit etre disponible. Ne pas deployer le build aux identifiants fictifs : recompiler ensuite avec la configuration prevue pour l'hebergement.
+Playwright execute automatiquement `npm run build:e2e` puis sert `dist-e2e/`. Ce dossier est reserve aux tests et ne doit pas etre deploye. La compilation de production `npm run build` garde sa configuration Google habituelle et son dossier `dist/` ; les packages natifs utilisent toujours `dist-native/`. Le port local `4174` doit etre disponible.
 
 ## Architecture
 

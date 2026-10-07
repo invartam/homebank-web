@@ -2,7 +2,7 @@ import { ArrowDownToLine, ArrowRight, CalendarClock, ChevronRight, CircleCheck, 
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import { Fragment, useMemo } from "react";
-import { type Account, type AccountBalances, type Transaction, type Wallet, accountBalanceGroups, aggregateBalanceTone, balanceTone, formatAmount, formatHbDateFr, isBankAccount, isSavingsAccount } from "../lib/homebank";
+import { type Account, type AccountBalances, type Transaction, type Wallet, accountBalanceGroups, aggregateBalanceTone, balanceTone, formatAmount, formatHbDateFr, isBankAccount, isSavingsAccount, overdraftLimit } from "../lib/homebank";
 import { recentTransactions, transactionType, transferLabel } from "../lib/wallet";
 import { EmptyState } from "./common";
 import { useToday } from "../hooks/useToday";
@@ -55,7 +55,7 @@ export function Dashboard({
           <strong className={"balance-value " + aggregateBalanceTone(group.accounts, group.reconciled)}>
             {formatAmount(wallet, group.accountKey, group.reconciled)}
           </strong>
-          <span className="balance-account-count"><WalletCards size={16} />{group.accounts.length} comptes actifs</span>
+          <span className="balance-account-count"><WalletCards size={16} />{group.accounts.length} compte{group.accounts.length === 1 ? "" : "s"} actif{group.accounts.length === 1 ? "" : "s"}</span>
         </div>
         <dl className="balance-pair">
           <div>
@@ -92,7 +92,7 @@ export function Dashboard({
         <div className="mini-list">
           <MiniTransactionGroup title="Passees" transactions={lastTransactions} wallet={wallet} onEdit={onEdit} />
           <MiniTransactionGroup title="A venir" transactions={nextTransactions} wallet={wallet} onEdit={onEdit} future />
-          {lastTransactions.length === 0 && nextTransactions.length === 0 && <EmptyState onImport={onImport} />}
+          {lastTransactions.length === 0 && nextTransactions.length === 0 && <EmptyState onImport={onImport} hasWallet={wallet.accounts.length > 0} />}
         </div>
       </section>
     </section>
@@ -160,7 +160,9 @@ export function AccountSection({
           const { reconciled, cleared, future } = balances.get(account.key)!;
 
           return (
-            <ButtonBase key={account.key} className={isSavingsAccount(account) ? "account-card savings" : "account-card"} onClick={() => onAccount(account.key)}>
+            <ButtonBase key={account.key} className={isSavingsAccount(account) ? "account-card savings" : "account-card"} onClick={() => onAccount(account.key)}
+              aria-label={account.name + ", solde rapproche " + formatAmount(wallet, account.key, reconciled)
+                + (reconciled < overdraftLimit(account) ? ", decouvert autorise depasse" : reconciled < 0 ? ", dans le decouvert autorise" : "")}>
               <span className="account-type-icon">{isSavingsAccount(account) ? <Vault size={22} /> : <Landmark size={22} />}</span>
               <span className="account-identity"><span>{account.name}</span><small>{account.bankName || (isSavingsAccount(account) ? "Compte d'epargne" : "Compte bancaire")}</small></span>
               <ChevronRight size={18} className="account-chevron" />
@@ -178,6 +180,7 @@ export function AccountSection({
                   <dd className={`balance-value ${balanceTone(account, future)}`}>{formatAmount(wallet, account.key, future)}</dd>
                 </div>
               </dl>
+              {account.minimum !== 0 && <span className="account-overdraft">D&eacute;couvert autoris&eacute; : {formatAmount(wallet, account.key, Math.abs(overdraftLimit(account)))}</span>}
             </ButtonBase>
           );
         })}

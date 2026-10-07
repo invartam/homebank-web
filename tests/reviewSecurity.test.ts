@@ -78,7 +78,7 @@ describe("security review regressions", () => {
     for (const name of ["ci", "release"]) {
       const workflow = parse(readFileSync(".github/workflows/" + name + ".yml", "utf8"));
       for (const job of Object.values(workflow.jobs) as any[]) {
-        for (const step of job.steps ?? []) if (step.uses) expect(step.uses).toMatch(/^actions\/[\w-]+@[0-9a-f]{40}$/);
+        for (const step of job.steps ?? []) if (step.uses) expect(step.uses).toMatch(/^[\w-]+\/[\w-]+@[0-9a-f]{40}$/);
       }
     }
   });
