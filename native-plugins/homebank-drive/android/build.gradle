@@ -3,6 +3,10 @@ buildscript {
     dependencies { classpath 'com.android.tools.build:gradle:8.13.0' }
 }
 apply plugin: 'com.android.library'
+ext {
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion') ? rootProject.ext.androidxAppCompatVersion : '1.7.1'
+    androidxActivityVersion = project.hasProperty('androidxActivityVersion') ? rootProject.ext.androidxActivityVersion : '1.11.0'
+}
 android {
     namespace 'io.homebank.drive'
     compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 36
@@ -15,5 +19,7 @@ android {
 repositories { google(); mavenCentral() }
 dependencies {
     implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.activity:activity:$androidxActivityVersion"
     implementation 'com.google.android.gms:play-services-auth:21.5.0'
 }

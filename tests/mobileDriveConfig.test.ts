@@ -46,4 +46,15 @@ describe("mobile Drive packaging", () => {
     expect(workflow.jobs.ios.env.MOBILE_GOOGLE_IOS_CLIENT_ID).toContain("vars.MOBILE_GOOGLE_IOS_CLIENT_ID");
     expect(workflow.jobs.android.env.MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID).toContain("vars.MOBILE_GOOGLE_ANDROID_DEBUG_CLIENT_ID");
   });
+  it("declares the AndroidX compile dependencies used by the native Drive plugin", () => {
+    const gradle = readFileSync("native-plugins/homebank-drive/android/build.gradle", "utf8");
+    for (const [property, artifact, fallback] of [
+      ["androidxAppCompatVersion", "androidx.appcompat:appcompat", "1.7.1"],
+      ["androidxActivityVersion", "androidx.activity:activity", "1.11.0"],
+    ]) {
+      expect(gradle).toContain(`implementation "${artifact}:$${property}"`);
+      expect(gradle).toContain(`project.hasProperty('${property}') ? rootProject.ext.${property} : '${fallback}'`);
+    }
+    expect(gradle).toContain("implementation project(':capacitor-android')");
+  });
 });
