@@ -88,6 +88,8 @@ Pour lancer l'application sur votre machine ou la publier : **[guide technique d
 
 Pour générer les installateurs macOS/Windows, les applications iOS/Android et les releases GitHub : **[guide de packaging](README_PACKAGING.md)**, avec les prérequis de signature et les limites de l'intégration Drive native.
 
+Pour les Mac PowerPC sous OS X 10.3.9 : **[client natif HomeBank Panther](panther/README.md)**, avec saisie, edition, sauvegarde, calendriers et [Drive direct par compte de service](panther/DRIVE_SETUP.md), a compiler dans Panther avec Xcode 1.5. Ce client est distinct de l'application web. Le kit HTTPS est valide dans la VM PPC ; la nouvelle integration Drive et son execution sur l'iMac restent a valider.
+
 ## Une première version déjà utilisable
 
 HomeBank Web est encore un MVP. La création des planifications, l'édition des opérations ventilées et la résolution des conflits entre appareils ne sont pas disponibles. Les totaux du tableau de bord supposent une même devise ; les prévisions séparent les devises sans conversion.

@@ -41,6 +41,11 @@ test-results/
 playwright-report/
 *.log
 
+# Private Panther working journal and consolidation receipt
+*.panther-journal
+*.panther-journal.lock
+*.panther-commit.plist
+
 # OS metadata
 .DS_Store
 Thumbs.db
