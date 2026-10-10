@@ -6,6 +6,7 @@ import { type Account, type AccountBalances, type Transaction, type Wallet, acco
 import { recentTransactions, transactionType, transferLabel } from "../lib/wallet";
 import { EmptyState } from "./common";
 import { useToday } from "../hooks/useToday";
+import { BalanceHistoryChart } from "./BalanceHistoryChart";
 
 export function Dashboard({
   wallet,
@@ -80,6 +81,8 @@ export function Dashboard({
         <AccountSection title="Banque" accounts={bankAccounts} balances={balances} wallet={wallet} onAccount={onAccount} />
         <AccountSection title="Epargne" accounts={savingsAccounts} balances={balances} wallet={wallet} onAccount={onAccount} />
       </div>
+
+      {accounts.length > 0 && <BalanceHistoryChart wallet={wallet} />}
 
       <section className="panel compact">
         <div className="section-header">

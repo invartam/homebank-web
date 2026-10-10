@@ -8,10 +8,10 @@ function worker() {
   const listeners = new Map<string, (event: unknown) => void>();
   const cache = { match: vi.fn(async () => undefined as unknown), put: vi.fn(async () => undefined), addAll: vi.fn(async () => undefined) };
   const fetch = vi.fn(async () => ({ ok: true, type: "basic", clone: () => "fresh-copy" }));
-  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v20", "homebank-web-mvp-v21"]), delete: vi.fn(async () => true) };
+  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => ["homebank-web-mvp-v9", "another-app", "homebank-web-mvp-v20", "homebank-web-mvp-v21", "homebank-web-mvp-v22", "homebank-web-mvp-v23", currentCache]), delete: vi.fn(async () => true) };
   const self = { location: { origin: "https://local.test" }, addEventListener: (name: string, fn: (event: unknown) => void) => listeners.set(name, fn), clients: { claim: vi.fn(async () => undefined) } };
-  runInNewContext(source, { URL, self, caches, fetch });
-  return { cache, fetch, caches, self, listeners };
+  const currentCache = runInNewContext(source + "\nCACHE_NAME;", { URL, self, caches, fetch }) as string;
+  return { cache, fetch, caches, self, listeners, currentCache };
 }
 
 describe("PWA cache", () => {
@@ -44,13 +44,18 @@ describe("PWA cache", () => {
   });
 
   it("only removes older HomeBank caches on activation", async () => {
-    const { listeners, caches, self } = worker();
+    const { listeners, caches, self, currentCache } = worker();
     let completion: Promise<unknown> = Promise.resolve();
     listeners.get("activate")!({ waitUntil: (value: Promise<unknown>) => { completion = value; } });
     await completion;
     expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v9");
     expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v20");
-    expect(caches.delete).toHaveBeenCalledTimes(2);
+    expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v21");
+    expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v22");
+    expect(caches.delete).toHaveBeenCalledWith("homebank-web-mvp-v23");
+    expect(caches.delete).not.toHaveBeenCalledWith(currentCache);
+    expect(caches.delete).not.toHaveBeenCalledWith("another-app");
+    expect(caches.delete).toHaveBeenCalledTimes(5);
     expect(self.clients.claim).toHaveBeenCalledOnce();
   });
 

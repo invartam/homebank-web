@@ -20,6 +20,7 @@ Retrouvez l'essentiel dès l'ouverture : vos comptes actifs, votre épargne et l
 | --- | --- |
 | Banque et épargne séparées | Une lecture immédiate de votre argent disponible et de vos réserves. |
 | Soldes rapproché, pointé et futur | Le solde rapproché en principal, avec les autres soldes pour suivre l'évolution de vos comptes. |
+| Rapport de solde interactif | Une courbe unique, du détail quotidien à plusieurs années, avec projection des opérations récurrentes. |
 | Découvert pris en compte | Des soldes verts, orange ou rouges selon la situation et l'autorisation de chaque compte. |
 | Activité récente et à venir | Les cinq dernières opérations passées et les cinq prochaines opérations futures. |
 | Recherche et filtre par compte | Un accès rapide à l'opération que vous cherchez. |
@@ -28,6 +29,18 @@ Retrouvez l'essentiel dès l'ouverture : vos comptes actifs, votre épargne et l
 Les comptes désactivés restent dans votre fichier HomeBank, mais ne viennent pas encombrer votre tableau de bord.
 
 Besoin de consulter un ancien compte ? Activez **Inclure les comptes clos** dans la vue Opérations ou dans le calendrier de l'Échéancier. Vos archives deviennent consultables sans modifier la page Comptes, qui reste réservée aux comptes ouverts.
+
+## Explorez l'évolution de vos soldes
+
+Dans la vue **Comptes**, une courbe unique permet de parcourir l'évolution du solde comptable de vos comptes banque, de votre épargne ou d'un compte individuel. Elle inclut le solde initial et toutes les opérations inscrites non annulées. Les soldes rapprochés affichés en principal dans les comptes restent inchangés.
+
+Zoomez jusqu'au jour, dézoomez sur plusieurs années, déplacez la période ou sélectionnez vos dates. Le zoom fonctionne avec les boutons, le sélecteur temporel, la molette avec Ctrl et le pincement sur mobile.
+
+![Rapport de solde historique et prévisionnel avec zoom temporel, en thème sombre, sur des données fictives](docs/screenshots/balance-history-dark.png)
+
+Avec **Prévisions**, consultez le solde projeté sur **3 mois, 1 an ou 5 ans**. La partie future de la courbe, en pointillés, additionne les opérations déjà inscrites à venir et les prochaines échéances planifiées, selon leurs récurrences et leur nombre d'échéances restantes. Aucune opération n'est créée. Les devises ne sont jamais additionnées.
+
+La courbe bleue est accompagnée d'un remplissage léger pour mieux lire les variations. Sur la vue d'un compte individuel, une ligne rouge indique le seuil de découvert autorisé, y compris dans les prévisions. Son montant figure dans la légende ; les vues regroupées n'affichent pas de seuil artificiel.
 
 ## Pensé pour le quotidien sur mobile
 
@@ -88,7 +101,7 @@ Pour lancer l'application sur votre machine ou la publier : **[guide technique d
 
 Pour générer les installateurs macOS/Windows, les applications iOS/Android et les releases GitHub : **[guide de packaging](README_PACKAGING.md)**, avec les prérequis de signature et les limites de l'intégration Drive native.
 
-Pour les Mac PowerPC sous OS X 10.3.9 : **[client natif HomeBank Panther](panther/README.md)**, avec saisie, edition, sauvegarde, calendriers et [Drive direct par compte de service](panther/DRIVE_SETUP.md), a compiler dans Panther avec Xcode 1.5. Ce client est distinct de l'application web. Le kit HTTPS est valide dans la VM PPC ; la nouvelle integration Drive et son execution sur l'iMac restent a valider.
+Pour les Mac PowerPC sous OS X 10.3.9, le client natif **HomeBank Panther** est maintenant dans le projet séparé `homebank-panther`, avec saisie, édition, sauvegarde, calendriers et Drive direct par compte de service. Il se compile dans Panther avec Xcode 1.5 et reste distinct de l'application web.
 
 ## Une première version déjà utilisable
 

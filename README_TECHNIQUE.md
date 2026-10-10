@@ -122,6 +122,25 @@ Les deux operations d'un virement sont creees ou modifiees dans une seule sauveg
 
 Les ventilations et les virements importes incomplets, ambigus ou lies a un compte desactive conservent leur structure : leurs montants, comptes et type ne sont pas modifiables.
 
+### Graphique de solde
+
+La vue `Comptes` propose le graphique `Evolution du solde`, rendu avec [Apache ECharts](https://apache.github.io/echarts-handbook/en/how-to/chart-types/line/basic-line/). Le moteur canvas est importe dynamiquement avec uniquement les modules ligne, axes, infobulle, zoom, repere temporel et accessibilite. Il n'utilise aucun service distant et ne modifie pas le portefeuille.
+
+- Perimetres : comptes banque ouverts, comptes epargne ouverts ou compte individuel. Les comptes clos restent exclus, comme dans le tableau de bord.
+- Soldes : une seule courbe de solde comptable, sans couches de categories. Solde initial plus toutes les operations inscrites non annulees jusqu'a chaque date ; les ventilations ne sont pas comptees une seconde fois. Le solde rapproche principal des comptes n'est pas modifie.
+- Projection : horizons bornes a 3 mois, 12 mois (defaut) ou 60 mois a compter d'aujourd'hui. Les dates futures combinent operations inscrites et echeances projetees par `readScheduledOperations` / `projectScheduledOperations`. La prochaine date `nextdate` HomeBank determine les echeances encore a poster ; aucune deduplication heuristique par date/montant n'est appliquee. Un fichier avec `nextdate` obsolete doit etre corrige dans HomeBank. Aucune prevision n'est ajoutee aux dates passees ni a aujourd'hui.
+- Recurrences : moteur commun avec l'echeancier (quotidiennes, hebdomadaires, mensuelles, annuelles, relatives, limites et ajustements de week-end). Les previsions incompletes ou invalides sont signalees. Les operations inscrites apres l'horizon ne sont pas affichees ; elles le deviennent en allongeant l'horizon, dans la limite de 5 ans.
+- Virements : deux faces au sein du meme perimetre et de la meme devise se compensent a date identique. Les virements planifies entrants sont inclus meme lorsque seul le compte destination est selectionne. Un virement multidevise utilise le montant destination conserve dans le fichier, sans conversion implicite.
+- Devises : filtre distinct quand le perimetre contient plusieurs devises ; aucun taux de change ni total multidevise n'est applique.
+- Navigation : periodes historiques 1 mois, 3 mois, 1 an et 5 ans ancrees a aujourd'hui ; `Tout` inclut l'historique et l'horizon futur ; `Previsions` affiche aujourd'hui jusqu'a l'horizon. Dates personnalisees, zoom/dezoom, deplacement, curseur temporel, Ctrl+molette et pincement tactile restent disponibles. La resolution minimale est un jour.
+- Rendu : deux segments joints d'une meme courbe bleue (historique plein, futur en pointilles), remplissage translucide jusqu'a zero plus leger pour les previsions, repere aujourd'hui et infobulle de solde. Aucun empilement ni couche par categorie. Les dates et infobulles sont en francais ; themes clair/sombre et styles de plateforme restent applicables.
+- Decouvert : uniquement en vue `account:...`, une ligne rouge materialise `overdraftLimit(account)` et la legende affiche le montant dans la devise du compte. Le seuil vaut zero sans decouvert autorise. L'axe vertical inclut zero, le seuil et une marge pour que la ligne ne soit pas coupee au zoom ; aucun seuil n'est agrege pour les vues banque/epargne, meme lorsqu'elles contiennent un seul compte.
+- Donnees longues : nombre de points borne avec conservation des extrema du solde par intervalle sur les vues larges. Les fenetres de 730 jours ou moins contiennent chaque date quotidienne ; le point d'aujourd'hui est toujours conserve. La projection est memorisee independamment du zoom et ne modifie ni transactions ni modeles.
+
+Dans le navigateur, le module de graphique est charge au premier affichage puis peut etre mis en cache par la PWA ; sa toute premiere ouverture hors ligne peut donc necessiter une connexion. Les packages natifs contiennent ce module dans leurs assets locaux.
+
+Les calculs sont dans `src/lib/balanceHistory.ts`, les options ECharts dans `src/lib/balanceChartEngine.ts` et les controles dans `src/components/BalanceHistoryChart.tsx`. Les tests unitaires couvrent les soldes, projections, recurrences, devises, ventilations et virements ; Playwright couvre les horizons futurs, alertes, rendu canvas, themes, zoom jusqu'au jour et gestes sur desktop/mobile/compact, avec donnees fictives.
+
 ### Consultation des comptes clos
 
 Les vues `Operations` et `Planifiees > Echeancier` proposent un controle `Inclure les comptes clos`, desactive par defaut et independant pour chaque vue. Les comptes clos sont identifies par `(clos)` dans le filtre. Les operations saisies, les totaux et, dans le calendrier, les previsions suivent les comptes inclus. Les operations des comptes clos sont consultables en lecture seule dans la liste des operations ; la saisie reste reservee aux comptes ouverts.
