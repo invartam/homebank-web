@@ -37,6 +37,8 @@ import { shareNativeFile } from "./lib/nativeFiles";
 import { validateWalletSize } from "./lib/fileLimits";
 import { TransactionList } from "./components/TransactionList";
 import { useToday } from "./hooks/useToday";
+import { type ManualForecasts } from "./lib/salaryForecast";
+import { ManualForecastControl } from "./components/ManualForecastControl";
 
 type View = "dashboard" | "transactions" | "scheduled" | "add" | "settings";
 
@@ -48,16 +50,18 @@ export function App() {
   const [query, setQuery] = useState("");
   const [accountFilter, setAccountFilter] = useState(0);
   const [includeClosedTransactions, setIncludeClosedTransactions] = useState(false);
+  const [manualForecasts, setManualForecasts] = useState<ManualForecasts>({});
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [editingOriginal, setEditingOriginal] = useState<Transaction | null>(null);
   const [replaceDriveOpen, setReplaceDriveOpen] = useState(false);
   const [replacement, setReplacement] = useState<{ wallet?: ReturnType<typeof parseHomeBankXml> } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const { accountByKey, payeeByKey, categoryLabelByKey, activeAccounts, transactionAccounts, transactionAccountFilter, transactions, balances, totals, operationSummary } =
-    useWalletSelectors(wallet, query, accountFilter, includeClosedTransactions);
+    useWalletSelectors(wallet, query, accountFilter, includeClosedTransactions, manualForecasts);
   const disabled = busy || !hydrated;
 
   const resetNavigation = () => {
+    setManualForecasts({});
     setAccountFilter(0);
     setIncludeClosedTransactions(false);
     setQuery("");
@@ -250,6 +254,10 @@ export function App() {
                 accounts={operationSummary.accounts}
                 balances={balances}
               />
+              {transactionAccountFilter !== 0 && !isClosedAccount(accountByKey.get(transactionAccountFilter)!)
+                && balances.get(transactionAccountFilter)?.forecast?.kind !== "salary" && <ManualForecastControl
+                  wallet={wallet} account={accountByKey.get(transactionAccountFilter)!} settings={manualForecasts} today={today}
+                  onChange={(key, setting) => setManualForecasts((current) => ({ ...current, [key]: setting }))} />}
 
               <div className="filters">
                 <TextField label="Rechercher" size="small" value={query} onChange={(event) => setQuery(event.target.value)}
@@ -390,7 +398,7 @@ export function App() {
       </p>
 
       <nav className="bottom-nav" aria-label="Navigation principale">
-        <div className="navigation-brand"><img src="/icon.svg" width="36" height="36" alt="" /><span>HomeBank<small>Mon espace bancaire</small></span></div>
+        <div className="navigation-brand"><img src={`${import.meta.env.BASE_URL}icon.svg`} width="36" height="36" alt="" /><span>HomeBank<small>Mon espace bancaire</small></span></div>
         <p className="navigation-caption">Mon portefeuille</p>
         <NavButton active={view === "dashboard"} icon={<Home size={20} />} label="Comptes" onClick={() => setView("dashboard")} />
         <NavButton

@@ -3,7 +3,8 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => ({
   plugins: [react],
-  envDir: mode === "native" || mode === "e2e" ? false : undefined,
+  // Pages receives public browser configuration explicitly from GitHub variables.
+  envDir: ["native", "e2e", "pages"].includes(mode) ? false : undefined,
   envPrefix: mode === "native" ? "NATIVE_UNUSED_" : mode === "e2e" ? "E2E_UNUSED_" : "VITE_",
   define: {
     "import.meta.env.VITE_NATIVE_APP": JSON.stringify(mode === "native"),

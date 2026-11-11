@@ -4,6 +4,8 @@ L'interface suit votre appareil : **Material** sur Android/ChromeOS et par defau
 
 **Votre HomeBank, partout avec vous.**
 
+[Ouvrir l'application web](https://blog.benjy.lu/homebank-web/) · [Deploiement GitHub Pages](README_TECHNIQUE.md#github-pages)
+
 Consultez vos comptes, saisissez une dépense depuis votre smartphone et anticipez vos prochaines échéances. HomeBank Web prolonge votre gestion HomeBank dans une interface bancaire claire, adaptée à l'ordinateur comme au mobile, tout en conservant votre fichier `.xhb`.
 
 [Découvrir les fonctionnalités](#vos-finances-en-un-coup-dœil) · [Voir l'expérience mobile](#pensé-pour-le-quotidien-sur-mobile) · [Installer et déployer](README_TECHNIQUE.md)
@@ -31,6 +33,16 @@ Les comptes désactivés restent dans votre fichier HomeBank, mais ne viennent p
 Besoin de consulter un ancien compte ? Activez **Inclure les comptes clos** dans la vue Opérations ou dans le calendrier de l'Échéancier. Vos archives deviennent consultables sans modifier la page Comptes, qui reste réservée aux comptes ouverts.
 
 ## Explorez l'évolution de vos soldes
+
+### Le solde futur avant votre prochain revenu
+
+Pour les comptes bancaires, le **solde futur** tient désormais compte des opérations inscrites et des échéances encore planifiées **avant le prochain salaire, jour du versement exclu**. La date de fin apparaît sous le montant. Le salaire est reconnu par sa catégorie ou son mémo ; à défaut, un revenu récurrent suffisamment important et dominant peut servir de borne, avec la mention **revenu estimé**. Un salaire déjà inscrit dans le futur est aussi pris en compte comme borne.
+
+Sans revenu identifié, la vue individuelle du compte propose **Prévision à date choisie** : activez l'option puis choisissez une date, **incluse** dans le calcul. L'option désactivée conserve le solde des opérations inscrites. Ces réglages sont propres à la session ouverte et ne sont pas sauvegardés dans le fichier HomeBank ; un rechargement les réinitialise.
+
+Les soldes rapproché et pointé ne changent pas. Les prévisions ne créent aucune opération et ne constituent pas un montant disponible garanti par la banque. Les échéances en retard non incluses sont signalées.
+
+### Un graphique pour l'historique et les prévisions
 
 Dans la vue **Comptes**, une courbe unique permet de parcourir l'évolution du solde comptable de vos comptes banque, de votre épargne ou d'un compte individuel. Elle inclut le solde initial et toutes les opérations inscrites non annulées. Les soldes rapprochés affichés en principal dans les comptes restent inchangés.
 

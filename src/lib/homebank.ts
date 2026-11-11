@@ -460,6 +460,7 @@ export interface AccountBalances {
   reconciled: number;
   cleared: number;
   future: number;
+  forecast?: { kind: "salary" | "manual" | "unavailable"; until: number; label: string; estimated: boolean; available: boolean; issues: string[]; overdue: number };
 }
 
 export const balancesByAccount = (wallet: Wallet) => {

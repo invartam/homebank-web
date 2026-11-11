@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from "react";
 import { type Account, type AccountBalances, type Wallet, accountBalanceGroups, aggregateBalanceTone, formatAmount } from "../lib/homebank";
+import { FutureBalance } from "./FutureBalance";
 
 export function BalanceStrip({
   wallet,
@@ -33,7 +34,7 @@ export function BalanceStrip({
       </div>
       <div>
         <dt>Futur</dt>
-        <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.future)}>{formatAmount(wallet, group.accountKey, group.future)}</dd>
+        <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.future)}><FutureBalance wallet={wallet} accounts={group.accounts} balances={balances} amount={group.future} accountKey={group.accountKey} /></dd>
       </div>
       </Fragment>)}
     </dl>

@@ -63,9 +63,33 @@ Ouvrir `http://localhost:4173`. Si Drive est teste sur cet apercu, autoriser aus
 
 ### Hebergement attendu
 
-Publier le contenu de `dist/` sur un hebergement statique en **HTTPS**, a la racine d'un domaine ou sous-domaine, par exemple `https://homebank.example.com/`.
+Publier le contenu de `dist/` sur un hebergement statique en **HTTPS**, a la racine d'un domaine ou dans un sous-dossier.
 
-La version actuelle utilise des chemins absolus pour `/sw.js`, le manifest, son `start_url` et l'icone. Publier sous `/homebank/` demande d'adapter ces chemins ainsi que `base` dans Vite ; changer uniquement `base` ne suffit pas.
+Les ressources, le manifest et le service worker suivent le chemin de base Vite. Pour un sous-dossier, compiler avec `npm run build -- --base /homebank/`. Les caches PWA sont separes par chemin de publication.
+
+### GitHub Pages
+
+Le workflow [pages.yml](.github/workflows/pages.yml) publie automatiquement chaque push sur `main` et peut etre relance depuis **Actions > GitHub Pages > Run workflow** sur `main`. Il execute l'audit des dependances de production (`npm audit --omit=dev --audit-level=moderate`), les tests unitaires, la compilation et un test navigateur de l'import et du rechargement hors ligne avant le deploiement. L'audit complet des outils de developpement et de packaging reste dans la CI generale. Il utilise les actions officielles [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) avec des revisions epinglees.
+
+1. Dans **Settings > Pages > Build and deployment**, choisir **GitHub Actions** comme source.
+2. Pour Drive, creer dans **Settings > Secrets and variables > Actions > Variables** les variables de depot `VITE_GOOGLE_CLIENT_ID`, `VITE_GOOGLE_API_KEY` et, facultativement, `VITE_GOOGLE_APP_ID`. Ce sont des parametres publics du navigateur, jamais une cle de compte de service ni un secret OAuth. Sans eux, l'import/export local reste disponible.
+3. Pousser sur `main`, puis suivre **Actions > GitHub Pages**. L'environnement `github-pages` expose l'URL du site : **https://blog.benjy.lu/homebank-web/** pour ce depot, qui herite du domaine du site utilisateur. Sans ce domaine personnalise, l'adresse serait `https://invartam.github.io/homebank-web/`. HTTPS est active dans les reglages Pages.
+4. Pour Drive, autoriser l'origine JavaScript **`https://blog.benjy.lu`** dans le client OAuth Google Cloud et le referent **`https://blog.benjy.lu/homebank-web/*`** dans les restrictions de la cle API. L'origine OAuth ne contient pas le chemin du depot. Utiliser le domaine effectivement affiche dans les reglages Pages si celui-ci change.
+5. Apres tout changement des variables, relancer le workflow pour reconstruire le site.
+
+Seul `dist/` est envoye a Pages. Le mode `pages` ignore les fichiers `.env*` locaux ; les variables doivent etre fournies explicitement a la compilation. Aucun fichier bancaire personnel ni identifiant natif n'est inclus dans ce deploiement. Les donnees utilisateur restent dans le navigateur ou dans le fichier Drive selectionne.
+
+Pour verifier le meme deploiement localement, sans charger `.env.local` :
+
+```bash
+npm run build:pages -- --base /homebank-web/
+npm run test:pages
+npm run preview -- --mode pages --base /homebank-web/ --port 4173
+```
+
+Ouvrir `http://localhost:4173/homebank-web/`. Le test utilise temporairement le port 4175. Pour tester une publication a la racine, compiler avec `--base /` puis lancer `PAGES_BASE_PATH='' npm run test:pages`.
+
+GitHub Pages ne permet pas de personnaliser les en-tetes de cache comme un serveur que vous administrez. Les recommandations de cache ci-dessous concernent les autres hebergeurs. Les sites publies sous un meme domaine partagent une origine : leurs stockages navigateur ne constituent pas des espaces isoles par depot. Exporter le portefeuille avant de changer d'adresse.
 
 ### Publication pas a pas
 
@@ -122,7 +146,22 @@ Les deux operations d'un virement sont creees ou modifiees dans une seule sauveg
 
 Les ventilations et les virements importes incomplets, ambigus ou lies a un compte desactive conservent leur structure : leurs montants, comptes et type ne sont pas modifiables.
 
-### Graphique de solde
+### Solde futur avant revenu / a date choisie
+
+`src/lib/salaryForecast.ts` adapte uniquement les soldes affiches par `useWalletSelectors`. `balancesByAccount`, le graphique comptable, le calendrier, l'export XML et les ecritures originales restent independants de cet horizon. Les sommes de cette projection utilisent `decimal.js` (clone local, precision 1000), avec controle de conversion vers le modele numerique existant : une perte de precision ou une projection tronquee produit une indication indisponible, pas un montant presente comme fiable.
+
+- Identification prioritaire sur les comptes banque ouverts : credit externe dont la categorie hierarchique ou le memo contient salaire(s), salary/salaries, paie ou payroll, sans distinction de casse/accents. Les virements internes sont exclus, y compris l'ancien mode `paymode=5`.
+- Repli estime : parmi les revenus recurrents non limites a une seule occurrence, cadence jusqu'au trimestre, retenir un revenu representant au moins 60 % de tous les revenus recurrents normalises mensuellement et au moins 50 % des sorties recurrentes mensuelles (sorties non nulles). Les revenus annuels participent au denominateur ; aucun seuil absolu EUR n'est applique aux autres devises. La mention `revenu estime` reste visible. Ce choix est une heuristique, pas une identification certaine d'un employeur.
+- Borne : prochaine echeance projetee dans les 366 prochains jours, ajustee selon les regles HomeBank. Un credit salarial deja inscrit dans le futur peut avancer cette borne, meme si le modele a ete desactive apres sa derniere publication. Les credits deja inscrits aujourd'hui restent dans le budget courant. Pour un revenu estime poste en avance, le rapprochement utilise categorie et tiers ou memo, pas l'egalite des montants.
+- Calcul automatique : solde initial + ecritures non annulees de date strictement inferieure a la borne + echeances restantes de `[aujourd'hui, borne[`. Le jour du prochain salaire est entierement exclu. `nextdate` determine les echeances non postees ; aucune deduplication heuristique des mouvements n'est effectuee. Une saisie manuelle doit donc laisser les curseurs HomeBank coherents. Les echeances anterieures a aujourd'hui ne sont pas ajoutees ; leur omission est signalee.
+- Repli manuel : dans la vue individuelle d'un compte ouvert sans salaire detecte, activer `Prevision a date choisie`. La date choisie est incluse ; date expiree/invalide = prevision indisponible. Le salaire detecte reste prioritaire. Sans activation, afficher le solde comptable futur avec la mention `Operations inscrites`.
+- Les options manuelles restent uniquement en memoire pendant la session. Elles sont indexees par fichier/proprietaire/compte/devise, ne modifient ni XML ni stockage bancaire et sont reinitialisees au rechargement ou a l'import explicite d'un fichier.
+- Les agregats sont des sommes des soldes futurs propres a chaque compte, potentiellement a des dates differentes, et sont explicitement annotes `Horizons propres a chaque compte`. Ils ne representent pas une projection a une date commune. Chaque devise reste separee. Une projection indisponible empeche l'affichage d'un total partiel comme s'il etait complet.
+- Ce solde est un solde en fin de periode, pas le minimum journalier ni une garantie de disponibilite immediate : un revenu intermediaire peut masquer un creux avant son versement.
+
+Tests synthetiques : `tests/salaryForecast.test.ts` et `tests/e2e/salaryForecast.spec.ts` (soldes automatiques, categories/memos, heuristique, autopost avance, precision, virements, bornes et activation/desactivation manuelle sur desktop/mobile).
+
+### Graphique comptable
 
 La vue `Comptes` propose le graphique `Evolution du solde`, rendu avec [Apache ECharts](https://apache.github.io/echarts-handbook/en/how-to/chart-types/line/basic-line/). Le moteur canvas est importe dynamiquement avec uniquement les modules ligne, axes, infobulle, zoom, repere temporel et accessibilite. Il n'utilise aucun service distant et ne modifie pas le portefeuille.
 

@@ -1,5 +1,6 @@
 import { Temporal } from "@js-temporal/polyfill";
-import { type RawNode, type Wallet, type TransactionType, TRANSACTION_FLAGS, currencyForAccount, hbDateToIso, isoToHbDate, visibleAccounts } from "./homebank";
+import { type RawNode, type Wallet, type TransactionType, currencyForAccount, hbDateToIso, isoToHbDate, visibleAccounts } from "./homebank";
+import { transactionType } from "./wallet";
 
 const RECUR = 1;
 const LIMITED = 2;
@@ -97,7 +98,8 @@ export function readScheduledOperations(wallet: Wallet, includeClosed = false) {
       const remaining = recurrence & LIMITED ? integerAttribute(node, "limit") : null;
       if (remaining === 0) return;
       const amount = numberAttribute(node, "amount");
-      const type = flags & TRANSACTION_FLAGS.internalTransfer ? "transfer" : amount > 0 ? "income" : "expense";
+      const type = transactionType({ amount, flags, paymode: integerAttribute(node, "paymode"),
+        destinationAccountKey: integerAttribute(node, "dst_account"), transferKey: integerAttribute(node, "kxfer") });
       operations.push({
         id: `schedule-${index}`, templateKey: integerAttribute(node, "key"), accountKey,
         destinationAccountKey: integerAttribute(node, "dst_account"), amount,

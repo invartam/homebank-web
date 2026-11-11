@@ -4,7 +4,7 @@ export const transactionTypeLabels: Record<TransactionType, string> = {
   expense: "D\u00e9pense", income: "Revenu", transfer: "Virement interne",
 };
 
-export const transactionType = (transaction: Transaction): TransactionType => {
+export const transactionType = (transaction: Pick<Transaction, "flags" | "paymode" | "transferKey" | "destinationAccountKey" | "amount">): TransactionType => {
   if ((transaction.flags & TRANSACTION_FLAGS.internalTransfer) !== 0 || transaction.paymode === 5 || transaction.transferKey !== 0 || transaction.destinationAccountKey !== 0) return "transfer";
   return transaction.amount > 0 || (transaction.amount === 0 && (transaction.flags & TRANSACTION_FLAGS.income) !== 0) ? "income" : "expense";
 };

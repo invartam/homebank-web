@@ -40,6 +40,20 @@ describe("packaging and release contracts", () => {
     expect(config.define["import.meta.env.VITE_NATIVE_APP"]).toBe("true");
     expect(readFileSync("native.html", "utf8")).not.toContain("google.com");
   });
+  it("isolates Pages from local env files and publishes only the tested dist with deployment permissions", () => {
+    const config = viteConfig({ mode: "pages", command: "build" });
+    expect(config.envDir).toBe(false);
+    expect(config.define["import.meta.env.VITE_NATIVE_APP"]).toBe("false");
+    const workflow = parse(readFileSync(".github/workflows/pages.yml", "utf8"));
+    expect(workflow.on.push.branches).toEqual(["main"]);
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(workflow.jobs.deploy.permissions).toEqual({ pages: "write", "id-token": "write" });
+    expect(workflow.jobs.deploy.needs).toBe("build");
+    const steps = workflow.jobs.build.steps;
+    expect(steps.some((step: any) => step.run === "npm test")).toBe(true);
+    expect(steps.some((step: any) => step.run === "npm run test:pages")).toBe(true);
+    expect(steps.find((step: any) => step.uses?.startsWith("actions/upload-pages-artifact@")).with.path).toBe("dist");
+  });
   it("rejects dependencies, local env files and wallets in the desktop package", () => {
     for (const file of ["/package.json", "/electron/main.cjs", "/dist-native/index.html"]) expect(allowedDesktopFile(file)).toBe(true);
     for (const file of ["/.env.local", "/node_modules/react/index.js", "/wallet.xhb", "/src/App.tsx", "/dist-native/private.xhb", "/dist-native/.env.local", "/electron/certificate.p12"]) expect(allowedDesktopFile(file)).toBe(false);

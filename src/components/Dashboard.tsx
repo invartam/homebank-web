@@ -7,6 +7,7 @@ import { recentTransactions, transactionType, transferLabel } from "../lib/walle
 import { EmptyState } from "./common";
 import { useToday } from "../hooks/useToday";
 import { BalanceHistoryChart } from "./BalanceHistoryChart";
+import { FutureBalance } from "./FutureBalance";
 
 export function Dashboard({
   wallet,
@@ -65,7 +66,7 @@ export function Dashboard({
           </div>
           <div>
             <dt>Solde futur</dt>
-            <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.future)}>{formatAmount(wallet, group.accountKey, group.future)}</dd>
+            <dd className={"balance-value " + aggregateBalanceTone(group.accounts, group.future)}><FutureBalance wallet={wallet} accounts={group.accounts} balances={balances} amount={group.future} accountKey={group.accountKey} /></dd>
           </div>
         </dl>
         </Fragment>)}
@@ -180,7 +181,7 @@ export function AccountSection({
                 </div>
                 <div>
                   <dt>Solde futur</dt>
-                  <dd className={`balance-value ${balanceTone(account, future)}`}>{formatAmount(wallet, account.key, future)}</dd>
+                  <dd className={`balance-value ${balanceTone(account, future)}`}><FutureBalance wallet={wallet} accounts={[account]} balances={balances} amount={future} accountKey={account.key} /></dd>
                 </div>
               </dl>
               {account.minimum !== 0 && <span className="account-overdraft">D&eacute;couvert autoris&eacute; : {formatAmount(wallet, account.key, Math.abs(overdraftLimit(account)))}</span>}

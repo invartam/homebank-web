@@ -1,8 +1,12 @@
 import { useMemo } from "react";
-import { type Wallet, balancesByAccount, sumAccountBalances, visibleAccounts } from "../lib/homebank";
+import { type Wallet, sumAccountBalances, visibleAccounts } from "../lib/homebank";
+import { salaryForecastBalances, type ManualForecasts } from "../lib/salaryForecast";
+import { useToday } from "./useToday";
 import { categoryPath, transactionType, transactionTypeLabels, transferLabel } from "../lib/wallet";
 
-export function useWalletSelectors(wallet: Wallet, query: string, accountFilter: number, includeClosed = false) {
+const noManualForecasts: ManualForecasts = {};
+export function useWalletSelectors(wallet: Wallet, query: string, accountFilter: number, includeClosed = false, manual = noManualForecasts) {
+  const today = useToday();
   const accountByKey = useMemo(() => new Map(wallet.accounts.map((account) => [account.key, account])), [wallet.accounts]);
   const payeeByKey = useMemo(() => new Map(wallet.payees.map((payee) => [payee.key, payee])), [wallet.payees]);
   const categoryLabelByKey = useMemo(() => {
@@ -13,7 +17,7 @@ export function useWalletSelectors(wallet: Wallet, query: string, accountFilter:
   const transactionAccounts = includeClosed ? wallet.accounts : activeAccounts;
   const transactionAccountKeys = useMemo(() => new Set(transactionAccounts.map((account) => account.key)), [transactionAccounts]);
   const transactionAccountFilter = transactionAccountKeys.has(accountFilter) ? accountFilter : 0;
-  const balances = useMemo(() => balancesByAccount(wallet), [wallet.accounts, wallet.transactions]);
+  const balances = useMemo(() => salaryForecastBalances(wallet, today, manual), [wallet.accounts, wallet.transactions, wallet.templates, wallet.categories, today, manual]);
   const totals = useMemo(() => sumAccountBalances(activeAccounts, balances), [activeAccounts, balances]);
   const transactions = useMemo(() => {
     const search = query.trim().toLocaleLowerCase("fr-FR");

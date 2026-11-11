@@ -22,5 +22,5 @@ if (import.meta.env.VITE_NATIVE_APP) void initializeMobileDrive().then(render);
 else render();
 
 if ("serviceWorker" in navigator && import.meta.env.PROD && !import.meta.env.VITE_NATIVE_APP) {
-  navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => undefined);
 }
