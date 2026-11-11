@@ -121,9 +121,19 @@ describe("manual future horizon", () => {
     expect(result.get(1)).toMatchObject({ future: 850, forecast: { kind: "manual", until: today + 5 } });
     expect(salaryForecastBalances(w, today, { [key]: { enabled: false, until: today + 5 } }).get(1)!.forecast).toBeUndefined();
   });
-  it("cannot override an automatically detected salary", () => {
-    const w = wallet(salary() + expense()); const key = manualForecastKey(w, w.accounts[0]);
-    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: today + 100 } }).get(1)!.forecast!.kind).toBe("salary");
+  it("overrides salary with an inclusive chosen date and restores the salary horizon when disabled", () => {
+    const w = wallet(salary() + expense() + posted(payday, -50) + posted(payday + 1, -70));
+    const key = manualForecastKey(w, w.accounts[0]);
+    const baseline = salaryForecastBalances(w, today).get(1)!;
+    expect(baseline).toMatchObject({ future: 900, forecast: { kind: "salary", until: payday } });
+    const result = salaryForecastBalances(w, today, { [key]: { enabled: true, until: payday } }).get(1)!;
+    expect(result).toMatchObject({ future: 2850, forecast: { kind: "manual", until: payday, estimated: false, available: true } });
+    expect(result.reconciled).toBe(baseline.reconciled);
+    expect(result.cleared).toBe(baseline.cleared);
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: false, until: payday } }).get(1)).toEqual(baseline);
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: today } }).get(1))
+      .toMatchObject({ future: 1000, forecast: { kind: "manual", until: today } });
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: today - 1 } }).get(1)!.forecast!.available).toBe(false);
   });
   it("rejects expired dates, isolates wallets/accounts and leaves closed accounts unchanged", () => {
     const w = wallet(expense()); const key = manualForecastKey(w, w.accounts[0]);
@@ -131,5 +141,25 @@ describe("manual future horizon", () => {
     const other = { ...w, sourceFileName: "autre.xhb" };
     expect(salaryForecastBalances(other, today, { [key]: { enabled: true, until: today + 5 } }).get(1)!.forecast).toBeUndefined();
     expect(salaryForecastBalances(w, today).get(3)).toEqual(balancesByAccount(w).get(3));
+  });
+  it("counts a posted salary once and includes subsequent salary occurrences through the selected day", () => {
+    const nextPayday = payday + 31;
+    const w = wallet(salary().replace(`nextdate="${payday}"`, `nextdate="${nextPayday}"`)
+      + expense().replace('recflg="1"', 'recflg="3" limit="1"')
+      + posted(payday, 2000, 'wording="Salaire"') + posted(nextPayday + 1, -70));
+    const key = manualForecastKey(w, w.accounts[0]);
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: payday } }).get(1))
+      .toMatchObject({ future: 2900, forecast: { kind: "manual", until: payday, available: true } });
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: nextPayday } }).get(1))
+      .toMatchObject({ future: 4900, forecast: { kind: "manual", until: nextPayday, available: true } });
+  });
+  it("clears the income estimate marker in manual mode and restores it with automatic detection", () => {
+    const w = wallet(salary().replace('wording="Salaire"', 'wording="Employeur fictif"') + expense());
+    const key = manualForecastKey(w, w.accounts[0]);
+    const baseline = salaryForecastBalances(w, today).get(1)!;
+    expect(baseline.forecast).toMatchObject({ kind: "salary", estimated: true });
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: true, until: payday } }).get(1))
+      .toMatchObject({ future: 2900, forecast: { kind: "manual", estimated: false, available: true } });
+    expect(salaryForecastBalances(w, today, { [key]: { enabled: false, until: payday } }).get(1)).toEqual(baseline);
   });
 });

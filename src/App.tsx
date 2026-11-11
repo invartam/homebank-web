@@ -255,7 +255,7 @@ export function App() {
                 balances={balances}
               />
               {transactionAccountFilter !== 0 && !isClosedAccount(accountByKey.get(transactionAccountFilter)!)
-                && balances.get(transactionAccountFilter)?.forecast?.kind !== "salary" && <ManualForecastControl
+                && <ManualForecastControl
                   wallet={wallet} account={accountByKey.get(transactionAccountFilter)!} settings={manualForecasts} today={today}
                   onChange={(key, setting) => setManualForecasts((current) => ({ ...current, [key]: setting }))} />}
 

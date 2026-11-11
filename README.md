@@ -38,7 +38,7 @@ Besoin de consulter un ancien compte ? Activez **Inclure les comptes clos** dans
 
 Pour les comptes bancaires, le **solde futur** tient désormais compte des opérations inscrites et des échéances encore planifiées **avant le prochain salaire, jour du versement exclu**. La date de fin apparaît sous le montant. Le salaire est reconnu par sa catégorie ou son mémo ; à défaut, un revenu récurrent suffisamment important et dominant peut servir de borne, avec la mention **revenu estimé**. Un salaire déjà inscrit dans le futur est aussi pris en compte comme borne.
 
-Sans revenu identifié, la vue individuelle du compte propose **Prévision à date choisie** : activez l'option puis choisissez une date, **incluse** dans le calcul. L'option désactivée conserve le solde des opérations inscrites. Ces réglages sont propres à la session ouverte et ne sont pas sauvegardés dans le fichier HomeBank ; un rechargement les réinitialise.
+La vue individuelle de chaque compte ouvert propose **Prévision à date choisie**, même lorsqu'un salaire est détecté : activez l'option puis choisissez une date, **incluse** dans le calcul. Cette date remplace l'horizon automatique du salaire. Désactiver l'option rétablit le calcul avant le prochain salaire détecté, ou le solde des opérations inscrites en l'absence de salaire. Ces réglages sont propres à la session ouverte et ne sont pas sauvegardés dans le fichier HomeBank ; un rechargement les réinitialise.
 
 Les soldes rapproché et pointé ne changent pas. Les prévisions ne créent aucune opération et ne constituent pas un montant disponible garanti par la banque. Les échéances en retard non incluses sont signalées.
 

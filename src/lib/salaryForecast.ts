@@ -58,6 +58,8 @@ export function salaryForecastBalances(wallet: Wallet, today: number, manual: Ma
       }
     }
     const setting = manual[manualForecastKey(wallet, account)];
+    // An explicit date takes precedence; switching it off restores salary detection.
+    if (setting?.enabled) { next = undefined; estimated = false; }
     if (!next && !setting?.enabled) {
       if (upcoming.issues.length) balances.get(account.key)!.forecast = {
         kind: "unavailable", until: today, label: "Revenu non calculable", estimated, available: false, issues: upcoming.issues, overdue: 0,
@@ -68,7 +70,7 @@ export function salaryForecastBalances(wallet: Wallet, today: number, manual: Ma
     const validDate = next || (Number.isInteger(setting.until) && setting.until >= today && setting.until <= 3652059);
     const relevant = parsed.operations.filter((operation) => operation.accountKey === account.key || operation.destinationAccountKey === account.key);
     const projection = validDate && boundary > today ? projectScheduledOperations(wallet, relevant, today, boundary - 1) : { entries: [], issues: [], overdueCount: 0 };
-    const issues = [...parsed.issues, ...upcoming.issues, ...projection.issues];
+    const issues = [...parsed.issues, ...(setting?.enabled ? [] : upcoming.issues), ...projection.issues];
     if (!validDate) issues.push("Choisir une date de prevision a partir d'aujourd'hui.");
     const forecast = { kind: next ? "salary" as const : "manual" as const, until: next ? next.date : setting.until, estimated, available: issues.length === 0, issues,
       overdue: projection.overdueCount, label: next?.label || "Date choisie" };

@@ -8,9 +8,9 @@ const xml = `<homebank v="1.6"><properties curr="1"/><cur key="1" iso="EUR" frac
   <account key="2" name="Compte libre fictif" curr="1" initial="500"/>
   <cat key="1" name="Revenus"/><cat key="2" name="Salaires" parent="1"/>
   <ope account="1" date="${today - 1}" amount="-50" st="2"/>
-  <ope account="1" date="${today + 20}" amount="2000"/>
+  <ope account="1" date="${today + 20}" amount="2000" category="2"/>
   <ope account="1" date="${today + 21}" amount="-100"/>
-  <fav account="1" amount="2000" recflg="1" unit="2" nextdate="${today + 20}" category="2" wording="Employeur fictif"/>
+  <fav account="1" amount="2000" recflg="1" unit="2" nextdate="${today + 50}" category="2" wording="Employeur fictif"/>
   <fav account="1" amount="-100" recflg="1" unit="2" nextdate="${today + 2}"/>
   <ope account="2" date="${today + 1}" amount="-50"/><ope account="2" date="${today + 5}" amount="-100"/>
   <fav account="2" amount="-25" recflg="1" unit="2" nextdate="${today + 3}"/>
@@ -32,7 +32,15 @@ test("automatically shows the balance strictly before salary without changing re
   await expect(card).toContainText("Avant le");
   await card.click();
   await expect(future(page)).toContainText("850,00");
-  await expect(page.getByLabel("Pr\u00e9vision \u00e0 date choisie")).toHaveCount(0);
+  const toggle = page.getByLabel("Pr\u00e9vision \u00e0 date choisie");
+  await expect(toggle).not.toBeChecked();
+  await toggle.check();
+  await page.getByLabel("Date de pr\u00e9vision").fill(hbDateToIso(today + 20));
+  await expect(future(page)).toContainText(/2\s*850,00/);
+  await expect(future(page)).toContainText("Au");
+  await toggle.uncheck();
+  await expect(future(page)).toContainText("850,00");
+  await expect(future(page)).toContainText("Avant le");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator("main .panel").first().screenshot({ path: testInfo.outputPath("salary-balance.png"), style: ".topbar, .bottom-nav { visibility: hidden !important; }" });
 });

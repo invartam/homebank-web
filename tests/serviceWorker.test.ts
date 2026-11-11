@@ -25,10 +25,11 @@ describe("PWA cache", () => {
       "https://local.test/homebank-web/", "https://local.test/homebank-web/index.html",
       "https://local.test/homebank-web/manifest.webmanifest", "https://local.test/homebank-web/icon.svg",
     ]);
-    caches.keys.mockResolvedValue(["homebank-web-mvp-v25", "homebank-web-mvp-scope-%2Fother%2F-v25", currentCache, currentCache.replace("v26", "v25")]);
+    const previousCache = currentCache.replace(/v\d+$/, "v25");
+    caches.keys.mockResolvedValue(["homebank-web-mvp-v25", "homebank-web-mvp-scope-%2Fother%2F-v25", currentCache, previousCache]);
     listeners.get("activate")!({ waitUntil });
     await completion;
-    expect(caches.delete).toHaveBeenCalledExactlyOnceWith(currentCache.replace("v26", "v25"));
+    expect(caches.delete).toHaveBeenCalledExactlyOnceWith(previousCache);
     fetch.mockRejectedValue(new Error("offline"));
     cache.match.mockResolvedValueOnce(undefined).mockResolvedValueOnce("cached-index");
     listeners.get("fetch")!({ request: { method: "GET", url: "https://local.test/homebank-web/", headers: { has: () => false }, mode: "navigate" }, respondWith: waitUntil });
