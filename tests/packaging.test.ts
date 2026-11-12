@@ -70,15 +70,40 @@ describe("packaging and release contracts", () => {
       { ...profile, Entitlements: { ...profile.Entitlements, "application-identifier": "TEAM.other.app" } },
     ]) expect(() => validateProfile(invalid, "io.example.app", "TEAM")).toThrow();
   });
-  it("publishes only after all platforms succeed, using a narrowly scoped token", () => {
+  it("publishes only successful desktop builds, allows omitted mobiles and rejects failed or cancelled builds", () => {
     const workflow = parse(readFileSync(".github/workflows/release.yml", "utf8"));
     expect(workflow.on.push.tags).toEqual(["v*"]);
     expect(workflow.permissions.contents).toBe("read");
     expect(workflow.jobs.publish.permissions.contents).toBe("write");
-    expect(workflow.jobs.publish.needs).toEqual(["validate", "desktop", "android", "ios"]);
+    expect(workflow.jobs.assemble.needs).toEqual(["validate", "desktop", "android", "ios"]);
+    expect(workflow.jobs.publish.needs).toBe("assemble");
     expect(workflow.jobs.publish.if).toBe("github.ref_type == 'tag'");
+    const assemble = new Function("needs", "cancelled", `return (${workflow.jobs.assemble.if});`);
+    const results = (validate = "success", desktop = "success", android = "skipped", ios = "skipped") => ({
+      validate: { result: validate }, desktop: { result: desktop }, android: { result: android }, ios: { result: ios },
+    });
+    expect(assemble(results(), () => false)).toBe(true);
+    expect(assemble(results("success", "success", "success", "success"), () => false)).toBe(true);
+    expect(assemble(results(), () => true)).toBe(false);
+    for (const failed of ["failure", "cancelled"]) {
+      for (const index of [0, 1, 2, 3]) {
+        const statuses = ["success", "success", "skipped", "skipped"];
+        statuses[index] = failed;
+        expect(assemble(results(...statuses), () => false)).toBe(false);
+      }
+    }
     for (const name of ["desktop", "android", "ios"]) expect(workflow.jobs[name].needs).toBe("validate");
     const artifacts = Object.values(workflow.jobs).flatMap((job: any) => job.steps ?? []).filter((step: any) => step.uses?.startsWith("actions/upload-artifact"));
     for (const step of artifacts) expect(step.with.path).not.toMatch(/\.packaging|\.p12|\.jks|\.mobileprovision/);
+    expect(workflow.on.workflow_dispatch.inputs.include_mobile.default).toBe(false);
+    for (const name of ["android", "ios"]) expect(workflow.jobs[name].if).toContain("INCLUDE_MOBILE_RELEASES");
+    expect(workflow.jobs.desktop.strategy.matrix.include.map((item: any) => `${item.target}-${item.arch}`))
+      .toEqual(["mac-arm64", "mac-x64", "windows-x64", "linux-x64"]);
+    const targets = require("../electron-builder.config.cjs");
+    expect(targets.linux.target).toEqual(["deb", "rpm"]);
+    expect(targets.deb.depends).toEqual(expect.arrayContaining(["libsecret-1-0", "libgbm1", "libasound2t64 | libasound2"]));
+    expect(targets.rpm.depends).toEqual(expect.arrayContaining(["libsecret", "mesa-libgbm", "alsa-lib"]));
+    expect(targets.mac.target).toContain("dmg");
+    expect(targets.win.target).toContain("nsis");
   });
 });

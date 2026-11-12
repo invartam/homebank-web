@@ -9,7 +9,7 @@ function files(directory) {
 }
 export function releaseArtifacts(directory, version) {
   const all = files(directory);
-  const artifacts = all.filter((file) => /\.(dmg|exe|zip|apk|aab|ipa)$/.test(file));
+  const artifacts = all.filter((file) => /\.(dmg|exe|deb|rpm|zip|apk|aab|ipa)$/.test(file));
   if (all.some((file) => !artifacts.includes(file) && file !== path.join(directory, "SHA256SUMS"))) throw new Error("Fichier inattendu dans release : publication refusee.");
   if (!artifacts.length) throw new Error("Aucun package a publier.");
   for (const file of artifacts) if (!path.basename(file).startsWith("HomeBankWeb-" + version + "-")) throw new Error("Artefact d'une autre version : " + path.basename(file));

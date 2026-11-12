@@ -21,6 +21,7 @@
     "desktop:dir": "node scripts/native-build.mjs desktop dir",
     "desktop:mac": "node scripts/native-build.mjs desktop mac",
     "desktop:windows": "node scripts/native-build.mjs desktop windows",
+    "desktop:linux": "node scripts/native-build.mjs desktop linux",
     "desktop:smoke": "node scripts/electron-smoke.mjs",
     "native:sync:android": "node scripts/native-build.mjs sync android",
     "native:sync:ios": "node scripts/native-build.mjs sync ios",

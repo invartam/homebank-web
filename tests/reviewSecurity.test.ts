@@ -72,6 +72,16 @@ describe("security review regressions", () => {
     writeFileSync(path.join(directory, "private.keystore"), "fictitious-test-data");
     expect(() => releaseArtifacts(directory, "0.1.0")).toThrow("publication refusee");
   });
+  it("accepts all desktop formats but rejects Linux packages with a different version or duplicate name", () => {
+    const directory = folder();
+    const names = ["HomeBankWeb-0.2.0-linux-x64.deb", "HomeBankWeb-0.2.0-linux-x64.rpm", "HomeBankWeb-0.2.0-mac-arm64.dmg", "HomeBankWeb-0.2.0-win-x64.exe"];
+    for (const name of names) writeFileSync(path.join(directory, name), "synthetic-package");
+    expect(releaseArtifacts(directory, "0.2.0").map((file) => path.basename(file)).sort()).toEqual([...names].sort());
+    expect(() => releaseArtifacts(directory, "0.3.0")).toThrow("autre version");
+    mkdirSync(path.join(directory, "duplicate"));
+    writeFileSync(path.join(directory, "duplicate", names[0]), "synthetic-package");
+    expect(() => releaseArtifacts(directory, "0.2.0")).toThrow("dupliques");
+  });
   it("hardens Electron fuses and pins all GitHub Actions to commits", () => {
     expect(require("../electron-builder.config.cjs").electronFuses).toMatchObject({ runAsNode: false, enableNodeOptionsEnvironmentVariable: false,
       enableNodeCliInspectArguments: false, onlyLoadAppFromAsar: true, enableEmbeddedAsarIntegrityValidation: true });

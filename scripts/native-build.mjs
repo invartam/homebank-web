@@ -32,7 +32,8 @@ export function prepareDesktop() {
   const pkg = packageInfo();
   writeFileSync(path.join(destination, "package.json"), JSON.stringify({
     name: "homebank-web-desktop", version: pkg.version, description: "Gestion bancaire personnelle HomeBank",
-    productName: metadata.productName, author: "HomeBank Web", main: "electron/main.cjs", private: true, dependencies: {},
+    productName: metadata.productName, author: "HomeBank Web", homepage: "https://github.com/invartam/homebank-web",
+    main: "electron/main.cjs", private: true, dependencies: {},
   }, null, 2));
 }
 export function syncMobile(platform) {
@@ -53,9 +54,10 @@ export function syncMobile(platform) {
 }
 export function desktopPackage(target, arch = process.arch) {
   if (!["arm64", "x64"].includes(arch)) throw new Error("ARCH doit etre arm64 ou x64.");
-  if (!["mac", "windows", "dir", "start"].includes(target)) throw new Error("Cible desktop invalide.");
+  if (!["mac", "windows", "linux", "dir", "start"].includes(target)) throw new Error("Cible desktop invalide.");
   if (target === "mac") requirePlatform("darwin");
   if (target === "windows") requirePlatform("win32");
+  if (target === "linux") requirePlatform("linux");
   prepareDesktop();
   if (target === "start") {
     const electron = JSON.parse(readFileSync(path.join(root, "node_modules/electron/package.json"), "utf8"));
@@ -65,7 +67,7 @@ export function desktopPackage(target, arch = process.arch) {
     return;
   }
   nodeTool("electron-builder/cli.js", ["--config", "electron-builder.config.cjs", "--publish", "never", `--${arch}`,
-    ...(target === "dir" ? ["--dir"] : [target === "mac" ? "--mac" : "--win"])], {
+    ...(target === "dir" ? ["--dir"] : [{ mac: "--mac", windows: "--win", linux: "--linux" }[target]])], {
       env: { ...process.env, ...(!process.env.CSC_LINK && !process.env.CSC_NAME ? { CSC_IDENTITY_AUTO_DISCOVERY: "false" } : {}) },
     });
   verifyDesktopPackages();
@@ -77,6 +79,7 @@ if (path.resolve(process.argv[1] ?? "") === fileURLToPath(import.meta.url)) {
     const [command = "web", target, arch] = process.argv.slice(2);
     if (command === "desktop" && target === "mac") requirePlatform("darwin");
     if (command === "desktop" && target === "windows") requirePlatform("win32");
+    if (command === "desktop" && target === "linux") requirePlatform("linux");
     buildNativeWeb();
     if (command === "desktop") desktopPackage(target ?? "dir", arch);
     else if (command === "sync") syncMobile(target);

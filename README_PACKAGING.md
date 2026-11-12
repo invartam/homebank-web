@@ -1,6 +1,6 @@
 # Packaging et releases
 
-La meme interface React est embarquee dans **Electron pour macOS/Windows** et **Capacitor pour iOS/Android**. Electron ne produit pas d'applications iOS ou Android. Aucun serveur web n'est necessaire une fois l'application installee.
+La meme interface React est embarquee dans **Electron pour macOS/Windows/Linux** et **Capacitor pour iOS/Android**. Electron ne produit pas d'applications iOS ou Android. Aucun serveur web n'est necessaire une fois l'application installee.
 
 ## Limites importantes
 
@@ -103,7 +103,7 @@ References : [Picker et scopes mobiles](https://developers.google.com/workspace/
 
 ## Builds locaux
 
-Executer depuis la racine du depot `homebank-web`. Sur Windows, utiliser npm sans installer Make. Les packages macOS exigent macOS ; les packages Windows exigent Windows. La CI utilise les OS correspondants.
+Executer depuis la racine du depot `homebank-web`. Sur Windows, utiliser npm sans installer Make. Les packages macOS exigent macOS ; les packages Windows exigent Windows ; les DEB/RPM exigent Linux. La CI utilise les OS correspondants. Sur Ubuntu, installer `rpm`, `fakeroot` et `libarchive-tools` pour les paquets Linux.
 
 | Cible | npm | Make |
 | --- | --- | --- |
@@ -114,6 +114,7 @@ Executer depuis la racine du depot `homebank-web`. Sur Windows, utiliser npm san
 | macOS Apple Silicon | `npm run desktop:mac -- arm64` | `make mac ARCH=arm64` |
 | macOS Intel | `npm run desktop:mac -- x64` | `make mac ARCH=x64` |
 | Windows x64 | `npm run desktop:windows -- x64` | `make windows ARCH=x64` |
+| Linux x64 (DEB et RPM) | `npm run desktop:linux -- x64` | `make linux ARCH=x64` |
 | Android APK debug | `npm run android:debug` | `make android` |
 | Android APK/AAB signes | `npm run android:release` | `make android-release` |
 | Creer la cle Android | `npm run android:key:generate` | `make android-key` |
@@ -122,7 +123,7 @@ Executer depuis la racine du depot `homebank-web`. Sur Windows, utiliser npm san
 | iOS IPA Ad Hoc | `npm run ios:adhoc` | `make ios-adhoc` |
 | Projets Android/iOS | `npm run native:sync:android` / `native:sync:ios` | `make sync-android` / `sync-ios` |
 
-Les commandes reconstruisent l'interface. Les packages sont dans `release/desktop`, `release/android` et `release/ios`. Les sorties desktop sont DMG/ZIP macOS et NSIS/ZIP Windows. L'AAB est destine a un store ; l'APK est installable directement.
+Les commandes reconstruisent l'interface. Les packages sont dans `release/desktop`, `release/android` et `release/ios`. Les sorties desktop sont DMG/ZIP macOS, NSIS (`.exe`)/ZIP Windows et DEB/RPM Linux. La pipeline produit macOS Apple Silicon **et** Intel, Windows x64 et Linux x64. L'AAB est destine a un store ; l'APK est installable directement.
 
 L'APK debug utilise un identifiant suffixe `.debug` et un stockage separe : il peut coexister avec l'application de distribution sans remplacer ses donnees.
 
@@ -236,27 +237,29 @@ Ouvrir **Settings > Secrets and variables > Actions** dans le depot. Encoder en 
 
 Sur macOS, `base64 -i certificat.p12 | pbcopy` prepare la valeur sans creer de fichier dans le depot. Ne jamais coller les secrets dans un fichier suivi ou un ticket. Les fichiers temporaires de signature sont supprimes par les etapes `always()` et exclus des artefacts. `GITHUB_TOKEN` fourni par Actions suffit pour publier, sans PAT.
 
-**Les secrets Android et iOS sont obligatoires pour une release sur tag.** S'ils manquent, aucune release incomplete n'est publiee. Les signatures desktop sont optionnelles pour generer, mais recommandees pour distribuer.
+**Les releases Electron ne necessitent aucun secret Android ou iOS.** Les signatures desktop sont optionnelles pour generer, mais recommandees pour distribuer. Les signatures de distribution restent necessaires a la notarisation macOS et a une distribution Windows signee.
 
-Une execution manuelle sur une branche via **Actions > Packages et Release > Run workflow** produit des artefacts de test : desktop, APK debug, application iOS simulateur. Elle ne publie pas de release.
+Une execution manuelle sur une branche via **Actions > Packages et Release > Run workflow** produit les artefacts Electron telechargeables pendant 14 jours, sans publier de release. L'option **include_mobile**, desactivee par defaut, ajoute un APK debug et une application iOS simulateur. Pour conserver une release avec les mobiles sur les tags, definir la variable de depot **`INCLUDE_MOBILE_RELEASES=true`** et configurer les secrets de signature Android/iOS ; un echec mobile bloque alors aussi la publication.
 
 ## Versioning et release
 
 `package.json` est la source de la version SemVer. Le lockfile et le tag doivent correspondre exactement.
 
 ```sh
-npm run release:prepare -- 0.2.0
-npm run release:check -- v0.2.0
+npm run release:prepare -- 0.2.1
+npm run release:check -- v0.2.1
 git add package.json package-lock.json
-git commit -m "Release 0.2.0"
-git tag v0.2.0
+git commit -m "Release 0.2.1"
+git tag v0.2.1
 git push origin HEAD
-git push origin v0.2.0
+git push origin v0.2.1
 ```
 
 Commiter aussi les scripts, workflows et modifications applicatives avant de taguer. `release:prepare` ne cree ni commit, ni tag, ni push. Les fichiers non commites ne figurent pas dans le build GitHub du tag.
 
-`.github/workflows/release.yml` verifie les versions, lance les tests et compile le web, puis genere les packages sur les runners natifs. La publication ne commence qu'apres la reussite de **toutes** les cibles. La release inclut les fichiers et `SHA256SUMS`, avec des notes generees. Les permissions d'ecriture sont limitees au job de publication.
+Choisir une version et un tag encore inutilises. Un tag existant pointe sur les anciens sources : relancer sa pipeline ne construit pas les corrections ajoutees ensuite sur `main`.
+
+`.github/workflows/release.yml` verifie les versions, lance les tests et compile le web, puis genere les packages sur quatre runners : macOS arm64, macOS x64, Windows x64 et Ubuntu 24.04 x64. Linux produit **les deux formats `.deb` et `.rpm`**, et son test Electron utilise Xvfb. La publication sur un tag `vX.Y.Z` ne commence qu'apres la reussite de toutes les cibles Electron et des eventuelles cibles mobiles activees. La release inclut les fichiers et `SHA256SUMS`, avec des notes generees. Les permissions d'ecriture sont limitees au job de publication. Aucun tag ni release n'est cree par un simple lancement manuel sur `main`.
 
 Les deux workflows initialisent explicitement les outils Android avec [setup-android](https://github.com/android-actions/setup-android), fige sur un commit : outils en ligne de commande, licences, `ANDROID_HOME` et `PATH`, puis SDK 36 et Build Tools 36.0.0. Ils ne supposent pas que `sdkmanager` est deja accessible sur le runner. Les tests navigateur compilent un dossier isole `dist-e2e/` avec une configuration Google fictive ; ils ne necessitent aucun secret Google et cette configuration n'est pas utilisee par les packages distribues. Voir [les commandes de test](README_TECHNIQUE.md#tests).
 

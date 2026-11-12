@@ -3,6 +3,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      include_mobile:
+        description: Inclure les packages Android et iOS (signatures requises sur tag)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -47,6 +52,9 @@ jobs:
           - os: windows-latest
             target: windows
             arch: x64
+          - os: ubuntu-24.04
+            target: linux
+            arch: x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -55,6 +63,12 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
+      - name: Outils de packaging Linux et dependances graphiques
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm fakeroot libarchive-tools
+          npx playwright install --with-deps chromium
       - name: Packages Electron
         run: npm run desktop:${{ matrix.target }} -- ${{ matrix.arch }}
         env:
@@ -65,18 +79,28 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ELECTRON_GOOGLE_CLIENT_ID: ${{ vars.ELECTRON_GOOGLE_CLIENT_ID }}
           ELECTRON_GOOGLE_CLIENT_SECRET: ${{ secrets.ELECTRON_GOOGLE_CLIENT_SECRET }}
-      - run: npm run desktop:smoke
+      - name: Test Electron
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a npm run desktop:smoke
+          else
+            npm run desktop:smoke
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: desktop-${{ matrix.target }}-${{ matrix.arch }}
           path: |
             release/desktop/*.dmg
             release/desktop/*.exe
+            release/desktop/*.deb
+            release/desktop/*.rpm
             release/desktop/*.zip
           if-no-files-found: error
           retention-days: 14
 
   android:
+    if: vars.INCLUDE_MOBILE_RELEASES == 'true' || inputs.include_mobile == true
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -136,6 +160,7 @@ jobs:
           retention-days: 14
 
   ios:
+    if: vars.INCLUDE_MOBILE_RELEASES == 'true' || inputs.include_mobile == true
     needs: validate
     runs-on: macos-26
     timeout-minutes: 40
@@ -178,13 +203,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  publish:
-    if: github.ref_type == 'tag'
+  assemble:
+    if: >-
+      !cancelled() &&
+      needs.validate.result == 'success' && needs.desktop.result == 'success' &&
+      (needs.android.result == 'success' || needs.android.result == 'skipped') &&
+      (needs.ios.result == 'success' || needs.ios.result == 'skipped')
     needs: [validate, desktop, android, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -198,18 +225,40 @@ jobs:
           path: release/desktop
           merge-multiple: true
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: needs.android.result == 'success'
         with:
           name: android
           path: release/android
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        if: needs.ios.result == 'success'
         with:
           name: ios
           path: release/ios
       - run: npm run release:manifest
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-packages
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: assemble
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-packages
+          path: release
       - name: Publier tous les packages
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           mapfile -t assets < <(find release -type f | sort)
           args=(--verify-tag --generate-notes --title "HomeBank Web $GITHUB_REF_NAME")
