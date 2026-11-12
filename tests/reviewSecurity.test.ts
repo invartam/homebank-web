@@ -10,6 +10,8 @@ import { MAX_WALLET_BYTES, readWalletResponse } from "../src/lib/fileLimits";
 import { configureMobileSecurity } from "../scripts/mobile-security.mjs";
 import { verifyNativeAssets } from "../scripts/verify-native-assets.mjs";
 import { releaseArtifacts } from "../scripts/release.mjs";
+import { verifyDesktopPackages } from "../scripts/verify-desktop.mjs";
+import { createPackage } from "@electron/asar";
 const require = createRequire(import.meta.url);
 const { readLimitedResponse } = require("../electron/http.cjs");
 const folders: string[] = [];
@@ -20,6 +22,24 @@ function folder() {
 afterEach(() => folders.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })));
 
 describe("security review regressions", () => {
+  it("verifies Drive credentials inside the actual Electron archive without exposing their values", async () => {
+    const directory = folder(), source = path.join(directory, "source"), output = path.join(directory, "output");
+    mkdirSync(path.join(source, "electron"), { recursive: true }); mkdirSync(output);
+    const config = { clientId: "123456789-test.apps.googleusercontent.com", clientSecret: "synthetic-client-secret" };
+    writeFileSync(path.join(source, "electron/drive.config.json"), JSON.stringify(config));
+    await createPackage(source, path.join(output, "app.asar"));
+    expect(() => verifyDesktopPackages(output, config)).not.toThrow();
+    expect(() => verifyDesktopPackages(output, { ...config, clientId: "other.apps.googleusercontent.com" })).toThrow("differente de celle demandee");
+    expect(() => verifyDesktopPackages(output, { ...config, clientSecret: "other-synthetic-secret" })).toThrow("differente de celle demandee");
+  });
+  it("rejects a missing Drive configuration when the release requested it", async () => {
+    const directory = folder(), source = path.join(directory, "source"), output = path.join(directory, "output");
+    mkdirSync(source); mkdirSync(output);
+    writeFileSync(path.join(source, "package.json"), "{}");
+    await createPackage(source, path.join(output, "app.asar"));
+    expect(() => verifyDesktopPackages(output, {})).not.toThrow();
+    expect(() => verifyDesktopPackages(output, { clientId: "123456789-test.apps.googleusercontent.com" })).toThrow("absente ou illisible");
+  });
   it("bounds streamed responses even without a Content-Length", async () => {
     for (const read of [readWalletResponse, (response: Response) => readLimitedResponse(response, MAX_WALLET_BYTES)]) {
       expect(await read(new Response("<homebank/>"))).toBe("<homebank/>");
