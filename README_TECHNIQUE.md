@@ -23,6 +23,8 @@ La revue des bibliotheques, de la securite, des bonnes pratiques et des optimisa
 
 Prerequis : Node.js **24.x a partir de 24.15.0**, ou **22.x a partir de 22.22.2**, npm et un navigateur moderne avec IndexedDB. Ces versions respectent les contraintes des dependances de compilation et de test du projet, notamment jsdom. Un fichier `.xhb` permet d'utiliser le logiciel ; Google Cloud est optionnel pour l'import/export local.
 
+L'audit complet (`npm run audit:dependencies`) inclut les outils de developpement et de packaging. Les overrides limites aux branches affectees de `glob` et `minimatch` imposent leurs versions corrigees en attendant leur adoption par les outils Electron/Capacitor ; les anciennes branches non concernees conservent leurs API. Toute evolution de ces overrides doit etre validee par les tests navigateur et le packaging Electron. Ne pas utiliser `npm audit fix --force` : il peut proposer une retrogradation majeure des outils.
+
 Depuis le dossier qui contient `homebank-web` :
 
 ```bash
