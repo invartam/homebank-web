@@ -52,6 +52,15 @@ export function syncMobile(platform) {
   configureMobileSecurity(platform);
   mobileIcons(platform);
 }
+export function desktopBuildEnvironment(env = process.env) {
+  const result = { ...env };
+  // Actions supplies absent secrets as empty strings; builder treats CSC_LINK="" as a file path.
+  for (const key of ["CSC_LINK", "CSC_KEY_PASSWORD", "CSC_NAME", "WIN_CSC_LINK", "WIN_CSC_KEY_PASSWORD", "APPLE_ID", "APPLE_APP_SPECIFIC_PASSWORD", "APPLE_TEAM_ID"]) {
+    if (result[key] === "") delete result[key];
+  }
+  if (!result.CSC_LINK && !result.CSC_NAME && !result.WIN_CSC_LINK) result.CSC_IDENTITY_AUTO_DISCOVERY = "false";
+  return result;
+}
 export function desktopPackage(target, arch = process.arch) {
   if (!["arm64", "x64"].includes(arch)) throw new Error("ARCH doit etre arm64 ou x64.");
   if (!["mac", "windows", "linux", "dir", "start"].includes(target)) throw new Error("Cible desktop invalide.");
@@ -68,7 +77,7 @@ export function desktopPackage(target, arch = process.arch) {
   }
   nodeTool("electron-builder/cli.js", ["--config", "electron-builder.config.cjs", "--publish", "never", `--${arch}`,
     ...(target === "dir" ? ["--dir"] : [{ mac: "--mac", windows: "--win", linux: "--linux" }[target]])], {
-      env: { ...process.env, ...(!process.env.CSC_LINK && !process.env.CSC_NAME ? { CSC_IDENTITY_AUTO_DISCOVERY: "false" } : {}) },
+      env: desktopBuildEnvironment(),
     });
   verifyDesktopPackages();
 }

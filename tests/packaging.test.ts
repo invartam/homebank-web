@@ -8,6 +8,7 @@ import { checkVersion, versionInfo } from "../scripts/packaging-utils.mjs";
 import { validateProfile } from "../scripts/mobile-build.mjs";
 import viteConfig from "../vite.config";
 import { allowedDesktopFile } from "../scripts/verify-desktop.mjs";
+import { desktopBuildEnvironment } from "../scripts/native-build.mjs";
 
 const require = createRequire(import.meta.url);
 const { assetPath } = require("../electron/security.cjs");
@@ -57,6 +58,13 @@ describe("packaging and release contracts", () => {
   it("rejects dependencies, local env files and wallets in the desktop package", () => {
     for (const file of ["/package.json", "/electron/main.cjs", "/dist-native/index.html"]) expect(allowedDesktopFile(file)).toBe(true);
     for (const file of ["/.env.local", "/node_modules/react/index.js", "/wallet.xhb", "/src/App.tsx", "/dist-native/private.xhb", "/dist-native/.env.local", "/electron/certificate.p12"]) expect(allowedDesktopFile(file)).toBe(false);
+  });
+  it("removes absent Actions signing secrets instead of treating an empty certificate as the working directory", () => {
+    const empty = { CSC_LINK: "", CSC_KEY_PASSWORD: "", APPLE_ID: "", APPLE_APP_SPECIFIC_PASSWORD: "", APPLE_TEAM_ID: "", PATH: "/test/bin" };
+    expect(desktopBuildEnvironment(empty)).toEqual({ PATH: "/test/bin", CSC_IDENTITY_AUTO_DISCOVERY: "false" });
+    expect(empty.CSC_LINK).toBe("");
+    const configured = { CSC_LINK: "certificate.p12", CSC_KEY_PASSWORD: "test-password", APPLE_ID: "test@example.invalid" };
+    expect(desktopBuildEnvironment(configured)).toEqual(configured);
   });
   const profile = { UUID: "uuid", TeamIdentifier: ["TEAM"], Entitlements: { "application-identifier": "TEAM.io.example.app", "get-task-allow": false }, ProvisionedDevices: ["device"], ExpirationDate: "2099-01-01" };
   it("accepts a valid matching Ad Hoc distribution profile", () => {
