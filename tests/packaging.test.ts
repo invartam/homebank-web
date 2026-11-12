@@ -85,7 +85,15 @@ describe("packaging and release contracts", () => {
     expect(workflow.jobs.publish.permissions.contents).toBe("write");
     expect(workflow.jobs.assemble.needs).toEqual(["validate", "desktop", "android", "ios"]);
     expect(workflow.jobs.publish.needs).toBe("assemble");
-    expect(workflow.jobs.publish.if).toBe("github.ref_type == 'tag'");
+    // Explicit status function prevents GitHub's implicit success() from propagating skipped mobile ancestors.
+    expect(workflow.jobs.publish.if).toMatch(/\bcancelled\(\)/);
+    const publish = new Function("github", "needs", "cancelled", `return (${workflow.jobs.publish.if});`);
+    expect(publish({ ref_type: "tag" }, { assemble: { result: "success" } }, () => false)).toBe(true);
+    expect(publish({ ref_type: "branch" }, { assemble: { result: "success" } }, () => false)).toBe(false);
+    expect(publish({ ref_type: "tag" }, { assemble: { result: "success" } }, () => true)).toBe(false);
+    for (const result of ["skipped", "failure", "cancelled"]) {
+      expect(publish({ ref_type: "tag" }, { assemble: { result } }, () => false)).toBe(false);
+    }
     const assemble = new Function("needs", "cancelled", `return (${workflow.jobs.assemble.if});`);
     const results = (validate = "success", desktop = "success", android = "skipped", ios = "skipped") => ({
       validate: { result: validate }, desktop: { result: desktop }, android: { result: android }, ios: { result: ios },

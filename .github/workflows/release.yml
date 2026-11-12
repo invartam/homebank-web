@@ -243,7 +243,8 @@ jobs:
           retention-days: 14
 
   publish:
-    if: github.ref_type == 'tag'
+    if: >-
+      !cancelled() && github.ref_type == 'tag' && needs.assemble.result == 'success'
     needs: assemble
     runs-on: ubuntu-latest
     timeout-minutes: 10
