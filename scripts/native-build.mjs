@@ -12,6 +12,9 @@ export function buildNativeWeb() {
   nodeTool("typescript/bin/tsc");
   nodeTool("vite/bin/vite.js", ["build", "--mode", "native"]);
   renameSync(path.join(root, "dist-native/native.html"), path.join(root, "dist-native/index.html"));
+  // The public project overview and sitemap belong to the browser deployment only.
+  rmSync(path.join(root, "dist-native/about"), { recursive: true, force: true });
+  rmSync(path.join(root, "dist-native/sitemap.xml"), { force: true });
   verifyNativeAssets(path.join(root, "dist-native"));
 }
 export function prepareDesktop() {
