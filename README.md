@@ -1,5 +1,25 @@
 # HomeBank Web
 
+A **personal finance PWA for HomeBank XHB files**, with transaction management, balance history and financial forecasting on desktop and mobile browsers. Use a local file or configure optional Google Drive synchronization. This is a separate application compatible with the HomeBank file format.
+
+[Open HomeBank Web](https://blog.benjy.lu/homebank-web/) · [Published release 0.2.2](https://github.com/invartam/homebank-web/releases/tag/v0.2.2) · [Technical guide](README_TECHNIQUE.md) · [Static project overview source](public/about/index.html).
+
+## Scope and limits
+
+Scheduled transactions are read-only; split-transaction editing, synchronization-conflict resolution and direct bank connections are not available. Forecasts are estimates. Back up your wallet and read the French guide before editing. Existing screenshots below use synthetic data.
+
+## Licensing and contributions
+
+No project-wide licence was found; choosing one requires an owner decision. Report browser, version and reproducible steps with synthetic data. Never attach a personal XHB file, authentication token or Drive credentials to an issue.
+
+## Related projects
+
+- [HomeBank Panther](https://github.com/invartam/homebank-panther): native personal finance on Mac OS X 10.3.9 PowerPC.
+- [HomeBank Web](https://github.com/invartam/homebank-web): a HomeBank XHB personal finance PWA. [Open the web application](https://blog.benjy.lu/homebank-web/).
+- [DWA-121 Panther driver](https://github.com/invartam/driver-dwa121-macosx-panther): USB Wi-Fi for a supported vintage Macintosh configuration.
+
+## Guide en français
+
 L'interface suit votre appareil : **Material** sur Android/ChromeOS et par defaut, **Apple Liquid Glass adapte** sur iOS/macOS, **Fluent adapte** sur Windows. Clair et sombre sont disponibles dans les trois variantes. [Voir les variantes et la revue du design](DESIGN_REVIEW.md).
 
 **Votre HomeBank, partout avec vous.**
