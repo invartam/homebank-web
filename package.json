@@ -1,12 +1,13 @@
 {
   "name": "homebank-web-mvp",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "type": "module",
   "engines": {
     "node": "^22.22.2 || >=24.15.0"
   },
   "scripts": {
+    "icons:generate": "node scripts/icons.mjs web",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
     "build:pages": "tsc && vite build --mode pages",

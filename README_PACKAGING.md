@@ -99,7 +99,7 @@ References : [Picker et scopes mobiles](https://developers.google.com/workspace/
 3. macOS/iOS : un Mac ; pour iOS, **Xcode 26+** complet et selectionne, pas seulement les Command Line Tools. Ouvrir Xcode pour accepter sa licence et terminer l'installation des composants avant le premier build.
 4. Android : Android Studio compatible Capacitor 8, JDK **21**, SDK **36**, Build Tools **36.0.0**, et les variables `JAVA_HOME` / `ANDROID_HOME`.
 
-`public/icon.svg` genere les icones. Les dependances et templates sont verrouilles dans `package-lock.json`.
+Les masters `assets/branding/homebank-modern.png` et `homebank-maskable.png` generent les icones. `npm run icons:generate` actualise les favicons, Apple Touch et PNG PWA dans `public/icons/`. Le packaging Electron produit automatiquement son PNG 1024 a coins arrondis et marge transparente ; le pipeline mobile reutilise le master. Les prompts et variantes sont documentes dans [assets/branding/README.md](assets/branding/README.md). Les dependances et templates sont verrouilles dans `package-lock.json`.
 
 `native/`, `.packaging/`, `dist-native/` et `release/` sont generes et ignores par Git. Ne pas y laisser de personnalisations indispensables sans les versionner explicitement. Si `appId` change, sauvegarder les personnalisations puis regenerer les dossiers `native/ios` et `native/android` : `cap sync` seul ne renomme pas les identifiants natifs. Un garde-fou empeche d'utiliser un projet genere pour un ancien identifiant.
 

@@ -18,6 +18,7 @@ const accessibilityPreferences = () => ({
 function createWindow() {
   window = new BrowserWindow({
     title: "HomeBank Web", width: 1280, height: 900, minWidth: 360, minHeight: 560,
+    icon: path.join(app.getAppPath(), "dist-native/icons/desktop-512.png"),
     show: false, autoHideMenuBar: true,
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true,
       preload: path.join(__dirname, "preload.cjs"), additionalArguments: [

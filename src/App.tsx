@@ -398,7 +398,7 @@ export function App() {
       </p>
 
       <nav className="bottom-nav" aria-label="Navigation principale">
-        <div className="navigation-brand"><img src={`${import.meta.env.BASE_URL}icon.svg`} width="36" height="36" alt="" /><span>HomeBank<small>Mon espace bancaire</small></span></div>
+        <div className="navigation-brand"><img src={`${import.meta.env.BASE_URL}icons/desktop-512.png`} width="36" height="36" alt="" /><span>HomeBank<small>Mon espace bancaire</small></span></div>
         <p className="navigation-caption">Mon portefeuille</p>
         <NavButton active={view === "dashboard"} icon={<Home size={20} />} label="Comptes" onClick={() => setView("dashboard")} />
         <NavButton

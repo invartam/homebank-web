@@ -23,7 +23,10 @@ describe("PWA cache", () => {
     await completion;
     expect(cache.addAll).toHaveBeenCalledWith([
       "https://local.test/homebank-web/", "https://local.test/homebank-web/index.html",
-      "https://local.test/homebank-web/manifest.webmanifest", "https://local.test/homebank-web/icon.svg",
+      "https://local.test/homebank-web/manifest.webmanifest", "https://local.test/homebank-web/icons/favicon-16.png",
+      "https://local.test/homebank-web/icons/favicon-32.png", "https://local.test/homebank-web/icons/apple-touch-icon.png",
+      "https://local.test/homebank-web/icons/app-192.png", "https://local.test/homebank-web/icons/app-512.png",
+      "https://local.test/homebank-web/icons/maskable-512.png", "https://local.test/homebank-web/icons/desktop-512.png",
     ]);
     const previousCache = currentCache.replace(/v\d+$/, "v25");
     caches.keys.mockResolvedValue(["homebank-web-mvp-v25", "homebank-web-mvp-scope-%2Fother%2F-v25", currentCache, previousCache]);
@@ -35,7 +38,7 @@ describe("PWA cache", () => {
     listeners.get("fetch")!({ request: { method: "GET", url: "https://local.test/homebank-web/", headers: { has: () => false }, mode: "navigate" }, respondWith: waitUntil });
     expect(await completion).toBe("cached-index");
     expect(cache.match).toHaveBeenLastCalledWith("https://local.test/homebank-web/index.html");
-    for (const url of ["https://local.test/icon.svg", "https://local.test/homebank-web-other/assets/main.js"]) {
+    for (const url of ["https://local.test/icons/favicon-32.png", "https://local.test/homebank-web-other/assets/main.js"]) {
       const respondWith = vi.fn();
       listeners.get("fetch")!({ request: { method: "GET", url, headers: { has: () => false }, destination: "script" }, respondWith });
       expect(respondWith).not.toHaveBeenCalled();
