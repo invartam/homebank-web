@@ -84,6 +84,85 @@ test("asks for confirmation before clearing the local wallet", async ({ page }) 
   await expect(page.getByRole("status")).toContainText("Donnees locales effacees");
 });
 
+test("confirms non-reconciled deletion, preserves reconciled entries and persists after reload", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Importer un fichier .xhb" })).toBeEnabled();
+  await page.locator('input[type="file"]').setInputFiles({ name: "deletion.xhb", mimeType: "application/xml", buffer: Buffer.from(sampleXml) });
+  await expect(page.getByRole("status")).toContainText("importe");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  const protectedRow = page.locator(".transaction-row").filter({ hasText: "Tiers existant" });
+  await expect(protectedRow.getByRole("button", { name: "Supprimer", exact: true })).toHaveCount(0);
+  const pointed = page.locator(".transaction-row").filter({ has: page.getByRole("button", { name: "Rapprocher", exact: true }) }).filter({ hasNot: page.getByRole("button", { name: "Pointer", exact: true }) });
+  await expect(pointed).toHaveCount(1);
+  await pointed.getByRole("button", { name: "Supprimer", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Supprimer cette operation ?", exact: true });
+  await expect(dialog).toContainText("Banque");
+  await expect(dialog).toContainText("-10,00");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.locator(".transaction-row")).toHaveCount(5);
+  await pointed.getByRole("button", { name: "Supprimer", exact: true }).click();
+  await dialog.getByRole("button", { name: "Confirmer la suppression", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator(".transaction-row")).toHaveCount(4);
+  await expect(page.getByRole("status")).toContainText("Suppression enregistree");
+  await page.reload();
+  await expect(page.getByRole("status")).toContainText("local restaure");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await expect(page.locator(".transaction-row")).toHaveCount(4);
+  await expect(protectedRow).toContainText("Rapprochee");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("deletes an internal transfer atomically and blocks its reconciled counterpart", async ({ page }) => {
+  const transferXml = sampleXml.replace("</homebank>",
+    `<ope date="${today}" account="1" dst_account="2" amount="-25" flags="8" kxfer="10" wording="Virement supprimable"/>`
+    + `<ope date="${today}" account="2" dst_account="1" amount="25" flags="10" kxfer="10" wording="Virement supprimable"/>`
+    + `<ope date="${today}" account="1" dst_account="2" amount="-30" flags="8" kxfer="11" wording="Virement protege"/>`
+    + `<ope date="${today}" account="2" dst_account="1" amount="30" flags="10" kxfer="11" st="2" wording="Virement protege"/></homebank>`);
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Importer un fichier .xhb" })).toBeEnabled();
+  await page.locator('input[type="file"]').setInputFiles({ name: "transfers.xhb", mimeType: "application/xml", buffer: Buffer.from(transferXml) });
+  await expect(page.getByRole("status")).toContainText("importe");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  const protectedDebit = page.locator(".transaction-row").filter({ hasText: "Virement protege" }).filter({ has: page.getByRole("button", { name: "Rapprocher", exact: true }) });
+  await expect(protectedDebit.getByRole("button", { name: "Supprimer", exact: true })).toBeDisabled();
+  const transferRows = page.locator(".transaction-row").filter({ hasText: "Virement supprimable" });
+  await expect(transferRows).toHaveCount(2);
+  await transferRows.first().getByRole("button", { name: "Supprimer", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Supprimer le virement interne ?", exact: true });
+  await expect(dialog).toContainText("Les deux ecritures");
+  await expect(dialog.locator("li")).toHaveCount(2);
+  await dialog.getByRole("button", { name: "Confirmer la suppression", exact: true }).click();
+  await expect(transferRows).toHaveCount(0);
+  await expect(page.locator(".transaction-row").filter({ hasText: "Virement protege" })).toHaveCount(2);
+});
+
+test("rejects deletion from a stale tab and preserves the saved operation", async ({ page }) => {
+  await importWallet(page);
+  const other = await page.context().newPage();
+  try {
+    await other.route("**/*", (route) => new URL(route.request().url()).hostname === "127.0.0.1" ? route.continue() : route.abort());
+    await other.goto("/");
+    await expect(other.getByRole("status")).toContainText("local restaure");
+    for (const tab of [page, other]) await tab.getByRole("button", { name: "Operations", exact: true }).click();
+    const first = page.locator(".transaction-row").filter({ hasText: "Operation de test 13 " });
+    const stale = other.locator(".transaction-row").filter({ hasText: "Operation de test 13 " });
+    await stale.getByRole("button", { name: "Supprimer", exact: true }).click();
+    await first.getByRole("button", { name: "Pointer", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Operation pointee");
+    const dialog = other.getByRole("dialog", { name: "Supprimer cette operation ?", exact: true });
+    await dialog.getByRole("button", { name: "Confirmer la suppression", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("autre fenetre");
+    await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+    await expect(stale).toBeVisible();
+    await other.reload();
+    await expect(other.getByRole("status")).toContainText("local restaure");
+    await other.getByRole("button", { name: "Operations", exact: true }).click();
+    await expect(stale).toBeVisible();
+    await expect(stale.getByRole("button", { name: "Pointer", exact: true })).toHaveCount(0);
+  } finally { await other.close(); }
+});
+
 test("rejects stale writes from a second tab without overwriting the first tab", async ({ page }) => {
   await importWallet(page);
   const other = await page.context().newPage();

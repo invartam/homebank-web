@@ -1,5 +1,5 @@
 import { type Transaction, type Wallet, emptyWallet } from "./homebank";
-import { commitTransaction, setTransactionStatus } from "./wallet";
+import { commitTransaction, deleteTransaction, setTransactionStatus, transactionDeletionTargets } from "./wallet";
 import { DriveApiError, DriveAuthorizationError, DriveFileUnavailableError, type DriveFileRef } from "./googleDrive";
 import type { WalletSession } from "./storage";
 
@@ -319,6 +319,18 @@ export class WalletController {
   mark = (id: string, status: Transaction["status"]) => this.run(async () => {
     const wallet = setTransactionStatus(this.state.wallet, id, status);
     await this.persistTransaction(wallet, status === "reconciled" ? "Operation rapprochee." : "Operation pointee.");
+  });
+
+  remove = (originals: readonly Transaction[], confirmedWallet: Wallet) => this.run(async () => {
+    if (confirmedWallet !== this.state.wallet) {
+      throw new Error("Le portefeuille a change depuis la demande de suppression. Fermez la confirmation et recommencez.");
+    }
+    const targets = transactionDeletionTargets(this.state.wallet, originals[0]?.id ?? "");
+    if (targets.length !== originals.length || targets.some((item, index) => JSON.stringify(item) !== JSON.stringify(originals[index]))) {
+      throw new Error("Cette operation ou son virement lie a change. Fermez la confirmation et recommencez.");
+    }
+    const wallet = deleteTransaction(this.state.wallet, targets[0].id);
+    await this.persistTransaction(wallet, "Suppression enregistree localement.");
   });
 
   reset = (discardPending = false) => this.run(async () => {

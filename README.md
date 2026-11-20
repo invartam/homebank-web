@@ -47,6 +47,7 @@ Retrouvez l'essentiel dès l'ouverture : vos comptes actifs, votre épargne et l
 | Activité récente et à venir | Les cinq dernières opérations passées et les cinq prochaines opérations futures. |
 | Recherche et filtre par compte | Un accès rapide à l'opération que vous cherchez. |
 | Pointage et rapprochement | Des actions directes pour garder vos comptes à jour. |
+| Suppression avec confirmation | Supprimez une opération non rapprochée ; les deux écritures d'un virement sont supprimées ensemble. |
 
 Les comptes désactivés restent dans votre fichier HomeBank, mais ne viennent pas encombrer votre tableau de bord.
 
@@ -117,7 +118,9 @@ La consultation des planifications est actuellement en lecture seule : elle ne c
 
 **Continuez avec HomeBank.** Importez votre fichier `.xhb`, puis exportez une copie à rouvrir dans l'application de bureau. Les comptes masqués et les données non éditables sont conservés dans le fichier.
 
-**Connectez votre Google Drive, si vous le souhaitez.** Choisissez votre fichier dans Drive : les ajouts et modifications d'opérations sont ensuite sauvegardés automatiquement sous forme de nouvelles révisions. Un indicateur signale les interruptions et les sauvegardes en attente.
+**Connectez votre Google Drive, si vous le souhaitez.** Choisissez votre fichier dans Drive : les ajouts, modifications et suppressions d'opérations sont ensuite sauvegardés automatiquement sous forme de nouvelles révisions. Un indicateur signale les interruptions et les sauvegardes en attente.
+
+Dans **Opérations**, le bouton **Supprimer** ouvre une confirmation avec le compte, la date et le montant. Les opérations rapprochées et les comptes clos sont protégés. Un virement ne peut être supprimé que si ses deux écritures sont identifiées et qu'aucune n'est rapprochée ; ses deux écritures disparaissent ensemble. Supprimer une opération ventilée supprime aussi ses ventilations, sans modifier ses catégories ni ses planifications. En cas d'interruption de Drive, la suppression reste sauvegardée localement et sera synchronisée à la reconnexion.
 
 **Gardez une copie locale.** Les modifications sont d'abord enregistrées dans le navigateur. Une fois l'application et le portefeuille chargés, la consultation et la saisie restent possibles hors ligne ; la synchronisation reprend au retour du réseau, si l'autorisation Google est valide. Une reconnexion peut demander une action de votre part.
 

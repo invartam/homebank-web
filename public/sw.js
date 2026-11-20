@@ -1,7 +1,7 @@
 const BASE_URL = new URL("./", self.location.href);
 // Other repositories can share the same GitHub Pages origin.
 const CACHE_PREFIX = BASE_URL.pathname === "/" ? "homebank-web-mvp-" : `homebank-web-mvp-scope-${encodeURIComponent(BASE_URL.pathname)}-`;
-const CACHE_NAME = `${CACHE_PREFIX}v28`;
+const CACHE_NAME = `${CACHE_PREFIX}v29`;
 const APP_SHELL = ["./", "index.html", "manifest.webmanifest", "icons/favicon-16.png", "icons/favicon-32.png", "icons/apple-touch-icon.png", "icons/app-192.png", "icons/app-512.png", "icons/maskable-512.png", "icons/desktop-512.png"].map((path) => new URL(path, BASE_URL).href);
 const INDEX_URL = new URL("index.html", BASE_URL).href;
 

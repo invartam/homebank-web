@@ -19,9 +19,9 @@ import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import { type Transaction, isClosedAccount, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
+import { type Transaction, type Wallet, formatAmount, formatHbDateFr, isClosedAccount, parseHomeBankXml, serializeHomeBankXml } from "./lib/homebank";
 import { googleDriveConfigured } from "./lib/googleDrive";
-import { newTransaction } from "./lib/wallet";
+import { newTransaction, transactionDeletionTargets } from "./lib/wallet";
 import { useWallet } from "./hooks/useWallet";
 import { useWalletSelectors } from "./hooks/useWalletSelectors";
 import { Dashboard } from "./components/Dashboard";
@@ -55,6 +55,8 @@ export function App() {
   const [editingOriginal, setEditingOriginal] = useState<Transaction | null>(null);
   const [replaceDriveOpen, setReplaceDriveOpen] = useState(false);
   const [replacement, setReplacement] = useState<{ wallet?: ReturnType<typeof parseHomeBankXml> } | null>(null);
+  const [deletion, setDeletion] = useState<{ wallet: Wallet; transactions: Transaction[] } | null>(null);
+  const [deletionError, setDeletionError] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
   const { accountByKey, payeeByKey, categoryLabelByKey, activeAccounts, transactionAccounts, transactionAccountFilter, transactions, balances, totals, operationSummary } =
     useWalletSelectors(wallet, query, accountFilter, includeClosedTransactions, manualForecasts);
@@ -67,6 +69,7 @@ export function App() {
     setQuery("");
     setEditing(null);
     setEditingOriginal(null);
+    setDeletion(null);
     setView("dashboard");
   };
 
@@ -146,6 +149,21 @@ export function App() {
 
   const markTransaction = (transaction: Transaction, status: Transaction["status"]) => {
     void controller.mark(transaction.id, status);
+  };
+
+  const requestDeletion = (transaction: Transaction) => {
+    try {
+      setDeletion({ wallet, transactions: structuredClone(transactionDeletionTargets(wallet, transaction.id)) });
+      setDeletionError("");
+    } catch (error) {
+      controller.setMessage(error instanceof Error ? error.message : "Suppression impossible.");
+    }
+  };
+
+  const confirmDeletion = async () => {
+    if (!deletion) return;
+    if (await controller.remove(deletion.transactions, deletion.wallet)) setDeletion(null);
+    else setDeletionError(controller.getSnapshot().message);
   };
 
   const commit = async (transaction: Transaction, payee: string) => {
@@ -290,6 +308,7 @@ export function App() {
                     readOnly={Boolean(accountByKey.get(txn.accountKey) && isClosedAccount(accountByKey.get(txn.accountKey)!))}
                     onEdit={editTransaction}
                     onMark={markTransaction}
+                    onDelete={requestDeletion}
                   />
                 )}
               </TransactionList>
@@ -362,6 +381,32 @@ export function App() {
           )}
         </fieldset>
       </main>
+
+      <Dialog open={Boolean(deletion)} onClose={() => { if (!disabled) setDeletion(null); }} aria-labelledby="delete-operation-title" aria-describedby="delete-operation-description" fullWidth maxWidth="sm">
+        <DialogTitle id="delete-operation-title">{deletion?.transactions.length === 2 ? "Supprimer le virement interne ?" : "Supprimer cette operation ?"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-operation-description">
+            {deletion?.transactions.length === 2
+              ? "Les deux ecritures du virement seront supprimees ensemble."
+              : "Cette operation sera supprimee du portefeuille."}
+            {" Cette action est definitive et sera enregistree localement, puis synchronisee si Drive est actif."}
+          </DialogContentText>
+          <ul>
+            {deletion?.transactions.map((transaction) => <li key={transaction.id}>
+              {deletion.wallet.accounts.find((account) => account.key === transaction.accountKey)?.name}
+              {" — "}{formatHbDateFr(transaction.date)}{" — "}{formatAmount(deletion.wallet, transaction.accountKey, transaction.amount)}
+              {transaction.memo && ` — ${transaction.memo}`}
+            </li>)}
+          </ul>
+          {deletion?.transactions.some((transaction) => transaction.splits.length > 0)
+            && <DialogContentText>Les ventilations de cette operation seront egalement supprimees.</DialogContentText>}
+          {deletionError && <Alert severity="error">{deletionError}</Alert>}
+        </DialogContent>
+        <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
+          <Button onClick={() => setDeletion(null)} disabled={disabled} autoFocus>Annuler</Button>
+          <Button color="error" variant="contained" onClick={confirmDeletion} disabled={disabled}>Confirmer la suppression</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={Boolean(replacement)} onClose={() => setReplacement(null)} aria-labelledby="replace-local-title" fullWidth maxWidth="sm">
         <DialogTitle id="replace-local-title">Remplacer le portefeuille local ?</DialogTitle>

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { WalletController, type WalletPorts } from "../src/lib/walletController";
 import type { WalletSession } from "../src/lib/storage";
-import { newTransaction, withTransactionType } from "../src/lib/wallet";
+import { commitTransaction, newTransaction, transactionDeletionTargets, withTransactionType } from "../src/lib/wallet";
 import { sampleWallet } from "./fixtures";
 import { DriveApiError, DriveAuthorizationError, DriveFileUnavailableError } from "../src/lib/googleDrive";
 
@@ -26,6 +26,79 @@ function harness(stored: WalletSession | undefined = session()) {
 }
 
 describe("wallet persistence and Drive ordering", () => {
+  it("persists both deleted transfer legs before Drive and keeps pending deletion after upload failure", async () => {
+    const wallet = commitTransaction(sampleWallet(), withTransactionType({ ...newTransaction(1), destinationAccountKey: 2 }, "transfer", 25), "");
+    const { controller, ports, persisted } = harness({ ...session(), wallet });
+    vi.mocked(ports.download).mockResolvedValue(wallet);
+    await controller.initialize();
+    const confirmed = controller.getSnapshot().wallet;
+    const originals = structuredClone(transactionDeletionTargets(confirmed, confirmed.transactions.at(-1)!.id));
+    ports.upload = vi.fn(async (uploaded) => {
+      expect(uploaded.transactions).toHaveLength(5);
+      expect(persisted()?.wallet.transactions).toHaveLength(5);
+      expect(persisted()?.pendingDriveSave).toBe(true);
+      throw new Error("Network offline");
+    });
+    expect(await controller.remove(originals, confirmed)).toBe(true);
+    expect(controller.getSnapshot().wallet.transactions).toHaveLength(5);
+    expect(controller.getSnapshot().pendingDriveSave).toBe(true);
+    expect(ports.upload).toHaveBeenCalledTimes(1);
+    const restored = new WalletController(ports);
+    await restored.initialize();
+    expect(restored.getSnapshot().wallet.transactions).toHaveLength(5);
+    expect(restored.getSnapshot().pendingDriveSave).toBe(true);
+    vi.mocked(ports.upload).mockResolvedValue(undefined);
+    await restored.resumeDrive(true);
+    expect(persisted()?.pendingDriveSave).toBe(false);
+    expect(persisted()?.wallet.transactions).toHaveLength(5);
+  });
+
+  it("keeps the wallet and both legs if saving a deletion fails or conflicts", async () => {
+    const wallet = commitTransaction(sampleWallet(), withTransactionType({ ...newTransaction(1), destinationAccountKey: 2 }, "transfer", 25), "");
+    const { controller, ports } = harness({ ...session(), wallet });
+    vi.mocked(ports.download).mockResolvedValue(wallet);
+    await controller.initialize();
+    const confirmed = controller.getSnapshot().wallet;
+    const originals = structuredClone(transactionDeletionTargets(confirmed, confirmed.transactions.at(-1)!.id));
+    vi.mocked(ports.save).mockRejectedValue(new Error("Local conflict or unavailable storage"));
+    expect(await controller.remove(originals, confirmed)).toBe(false);
+    expect(controller.getSnapshot().wallet).toBe(confirmed);
+    expect(controller.getSnapshot().wallet.transactions).toHaveLength(7);
+    expect(ports.upload).not.toHaveBeenCalled();
+  });
+
+  it("rejects stale and repeated confirmations, including changes queued before deletion", async () => {
+    const { controller, ports } = harness({ ...session(), driveFile: null });
+    await controller.initialize();
+    const confirmed = controller.getSnapshot().wallet;
+    const originals = structuredClone(transactionDeletionTargets(confirmed, confirmed.transactions[1].id));
+    const marking = controller.mark(confirmed.transactions[1].id, "reconciled");
+    const removing = controller.remove(originals, confirmed);
+    expect(await marking).toBe(true);
+    expect(await removing).toBe(false);
+    expect(ports.save).toHaveBeenCalledTimes(1);
+    expect(controller.getSnapshot().wallet.transactions).toHaveLength(5);
+    const current = controller.getSnapshot().wallet;
+    const next = structuredClone(transactionDeletionTargets(current, current.transactions[2].id));
+    expect(await controller.remove(next, current)).toBe(true);
+    expect(await controller.remove(next, current)).toBe(false);
+    expect(ports.save).toHaveBeenCalledTimes(2);
+    expect(ports.upload).not.toHaveBeenCalled();
+  });
+
+  it("revalidates both captured transfer originals even when a caller mutates a record in place", async () => {
+    const wallet = commitTransaction(sampleWallet(), withTransactionType({ ...newTransaction(1), destinationAccountKey: 2 }, "transfer", 25), "");
+    const { controller, ports } = harness({ ...session(), wallet, driveFile: null });
+    await controller.initialize();
+    const confirmed = controller.getSnapshot().wallet;
+    const originals = structuredClone(transactionDeletionTargets(confirmed, confirmed.transactions.at(-1)!.id));
+    confirmed.transactions.at(-2)!.memo = "Changed after confirmation";
+    expect(await controller.remove(originals, confirmed)).toBe(false);
+    expect(ports.save).not.toHaveBeenCalled();
+    expect(ports.upload).not.toHaveBeenCalled();
+    expect(controller.getSnapshot().wallet.transactions).toHaveLength(7);
+  });
+
   it("rejects an existing-operation draft after Drive replaces or modifies its source", async () => {
     const { controller, ports } = harness({ ...session(), driveFile: null });
     await controller.initialize();

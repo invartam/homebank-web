@@ -162,6 +162,38 @@ export const setTransactionStatus = (wallet: Wallet, id: string, status: Transac
   return status === "void" && counterpart ? upsertTransaction(result, { ...counterpart, status }) : result;
 };
 
+/** Resolve the complete deletion before changing either side of a transfer. */
+export const transactionDeletionTargets = (wallet: Wallet, id: string): Transaction[] => {
+  const matches = wallet.transactions.filter((item) => item.id === id);
+  if (matches.length !== 1) throw new Error("Operation introuvable ou identifiant ambigu.");
+  const transaction = matches[0];
+  const targets = [transaction];
+  if (transactionType(transaction) === "transfer") {
+    const counterpart = transferCounterpart(wallet, transaction);
+    if (!Number.isSafeInteger(transaction.transferKey) || transaction.transferKey <= 0 || transaction.transferKey > 0xffffffff
+      || !counterpart || transaction.accountKey === transaction.destinationAccountKey
+      || wallet.transactions.filter((item) => item.id === counterpart.id).length !== 1) {
+      throw new Error("Virement incomplet ou ambigu : aucune ecriture n'a ete supprimee.");
+    }
+    targets.push(counterpart);
+  }
+  if (targets.some((item) => item.status === "reconciled")) {
+    throw new Error("Une operation rapprochee ne peut pas etre supprimee, y compris l'autre ecriture d'un virement.");
+  }
+  if (targets.some((item) => {
+    const accounts = wallet.accounts.filter((account) => account.key === item.accountKey);
+    return accounts.length !== 1 || isClosedAccount(accounts[0]);
+  })) {
+    throw new Error("Les operations d'un compte clos ou introuvable ne peuvent pas etre supprimees.");
+  }
+  return targets;
+};
+
+export const deleteTransaction = (wallet: Wallet, id: string): Wallet => {
+  const ids = new Set(transactionDeletionTargets(wallet, id).map((item) => item.id));
+  return { ...wallet, transactions: wallet.transactions.filter((item) => !ids.has(item.id)) };
+};
+
 export const recentTransactions = (transactions: Transaction[], accountKeys: Set<number>, today = todayHbDate()) => {
   const active = transactions.filter((txn) => accountKeys.has(txn.accountKey) && txn.status !== "void");
   return {
